@@ -19,9 +19,9 @@ const (
 
 // StatsParams defines the parameters for the loki_stats tool.
 type StatsParams struct {
-	Query string `json:"query"           jsonschema:"description=LogQL selector (e.g. {app=nginx}),required"`
-	Start string `json:"start,omitempty" jsonschema:"description=Start time (RFC3339 or relative like 1h)"`
-	End   string `json:"end,omitempty"   jsonschema:"description=End time (RFC3339 or now)"`
+	Query string `json:"query"           jsonschema:"LogQL selector (e.g. {app=nginx})"`
+	Start string `json:"start,omitempty" jsonschema:"Start time (RFC3339 or relative like 1h)"`
+	End   string `json:"end,omitempty"   jsonschema:"End time (RFC3339 or now)"`
 }
 
 // StatsResult is the output of the loki_stats tool.

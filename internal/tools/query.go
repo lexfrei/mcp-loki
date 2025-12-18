@@ -31,11 +31,11 @@ var ErrInvalidTimeFormat = errors.New("invalid time format")
 
 // QueryParams defines the parameters for the loki_query tool.
 type QueryParams struct {
-	Query     string `json:"query"               jsonschema:"description=LogQL query string,required"`
-	Start     string `json:"start,omitempty"     jsonschema:"description=Start time (RFC3339 or relative like 1h)"`
-	End       string `json:"end,omitempty"       jsonschema:"description=End time (RFC3339 or now)"`
-	Limit     int    `json:"limit,omitempty"     jsonschema:"description=Maximum entries to return (default 100)"`
-	Direction string `json:"direction,omitempty" jsonschema:"description=Log order: forward or backward (default backward)"`
+	Query     string `json:"query"               jsonschema:"LogQL query string"`
+	Start     string `json:"start,omitempty"     jsonschema:"Start time (RFC3339 or relative like 1h)"`
+	End       string `json:"end,omitempty"       jsonschema:"End time (RFC3339 or now)"`
+	Limit     int    `json:"limit,omitempty"     jsonschema:"Maximum entries to return (default 100)"`
+	Direction string `json:"direction,omitempty" jsonschema:"Log order: forward or backward (default backward)"`
 }
 
 // QueryResult is the output of the loki_query tool.

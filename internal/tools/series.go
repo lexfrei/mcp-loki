@@ -18,9 +18,9 @@ var ErrMatchRequired = errors.New("match parameter is required")
 
 // SeriesParams defines the parameters for the loki_series tool.
 type SeriesParams struct {
-	Match []string `json:"match"           jsonschema:"description=Series selectors (e.g. {app=nginx}),required"`
-	Start string   `json:"start,omitempty" jsonschema:"description=Start time (RFC3339 or relative like 1h)"`
-	End   string   `json:"end,omitempty"   jsonschema:"description=End time (RFC3339 or now)"`
+	Match []string `json:"match"           jsonschema:"Series selectors (e.g. {app=nginx})"`
+	Start string   `json:"start,omitempty" jsonschema:"Start time (RFC3339 or relative like 1h)"`
+	End   string   `json:"end,omitempty"   jsonschema:"End time (RFC3339 or now)"`
 }
 
 // SeriesResult is the output of the loki_series tool.

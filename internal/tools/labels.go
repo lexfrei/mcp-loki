@@ -19,9 +19,9 @@ const (
 
 // LabelsParams defines the parameters for the loki_labels tool.
 type LabelsParams struct {
-	Name  string `json:"name,omitempty"  jsonschema:"description=Label name to get values for. If omitted returns all label names"`
-	Start string `json:"start,omitempty" jsonschema:"description=Start time (RFC3339 or relative like 1h)"`
-	End   string `json:"end,omitempty"   jsonschema:"description=End time (RFC3339 or now)"`
+	Name  string `json:"name,omitempty"  jsonschema:"Label name to get values for. If omitted returns all label names"`
+	Start string `json:"start,omitempty" jsonschema:"Start time (RFC3339 or relative like 1h)"`
+	End   string `json:"end,omitempty"   jsonschema:"End time (RFC3339 or now)"`
 }
 
 // LabelsResult is the output of the loki_labels tool.

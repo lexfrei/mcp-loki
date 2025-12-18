@@ -135,6 +135,55 @@ func (c *Client) Stats(ctx context.Context, query string, start, end time.Time) 
 	return &resp, nil
 }
 
+// Ready checks if Loki is ready to accept requests.
+func (c *Client) Ready(ctx context.Context) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/ready", http.NoBody)
+	if err != nil {
+		return errors.Wrap(err, "failed to create request")
+	}
+
+	c.setAuthHeaders(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return errors.Wrap(err, "request failed")
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return errors.Wrapf(ErrLokiAPI, "loki not ready: status %d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// Config returns Loki's current configuration.
+func (c *Client) Config(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+"/config", http.NoBody)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to create request")
+	}
+
+	c.setAuthHeaders(req)
+
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return "", errors.Wrap(err, "request failed")
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to read response body")
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return "", errors.Wrapf(ErrLokiAPI, "failed to get config: status %d", resp.StatusCode)
+	}
+
+	return string(body), nil
+}
+
 func (c *Client) doRequest(ctx context.Context, path string, params url.Values, result any) error {
 	reqURL := c.baseURL + path + "?" + params.Encode()
 

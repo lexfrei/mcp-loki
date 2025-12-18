@@ -83,6 +83,8 @@ func registerTools(server *mcp.Server, client *loki.Client) {
 	mcp.AddTool(server, tools.LabelsTool(), tools.NewLabelsHandler(client))
 	mcp.AddTool(server, tools.SeriesTool(), tools.NewSeriesHandler(client))
 	mcp.AddTool(server, tools.StatsTool(), tools.NewStatsHandler(client))
+	mcp.AddTool(server, tools.ReadyTool(), tools.NewReadyHandler(client))
+	mcp.AddTool(server, tools.ConfigTool(), tools.NewConfigHandler(client))
 }
 
 func runHTTPServer(ctx context.Context, server *mcp.Server, port string) {

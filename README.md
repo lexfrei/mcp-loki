@@ -3,7 +3,7 @@
 [![Go Version](https://img.shields.io/github/go-mod/go-version/lexfrei/mcp-loki)](https://go.dev/)
 [![License](https://img.shields.io/github/license/lexfrei/mcp-loki)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/lexfrei/mcp-loki)](https://github.com/lexfrei/mcp-loki/releases)
-[![CI](https://github.com/lexfrei/mcp-loki/actions/workflows/pr.yaml/badge.svg)](https://github.com/lexfrei/mcp-loki/actions/workflows/pr.yaml)
+[![Release](https://github.com/lexfrei/mcp-loki/actions/workflows/release.yaml/badge.svg)](https://github.com/lexfrei/mcp-loki/actions/workflows/release.yaml)
 
 MCP server for querying Grafana Loki logs. Enables LLMs to search and analyze logs via the Model Context Protocol.
 
@@ -19,18 +19,41 @@ MCP server for querying Grafana Loki logs. Enables LLMs to search and analyze lo
 
 ## Quick Start
 
+### Container (Podman/Docker)
+
 Add to your MCP client configuration:
 
 ```json
 {
   "mcpServers": {
     "loki": {
-      "command": "docker",
+      "command": "podman",
       "args": [
         "run", "--rm", "-i",
-        "-e", "LOKI_URL=http://host.docker.internal:3100",
+        "-e", "LOKI_URL=http://loki:3100",
         "ghcr.io/lexfrei/mcp-loki:latest"
       ]
+    }
+  }
+}
+```
+
+### Go Install
+
+```bash
+go install github.com/lexfrei/mcp-loki/cmd/mcp-loki@latest
+```
+
+MCP client configuration:
+
+```json
+{
+  "mcpServers": {
+    "loki": {
+      "command": "mcp-loki",
+      "env": {
+        "LOKI_URL": "http://loki:3100"
+      }
     }
   }
 }
@@ -55,9 +78,10 @@ All configuration is done via environment variables:
 
 ```json
 {
+  "command": "podman",
   "args": [
     "run", "--rm", "-i",
-    "-e", "LOKI_URL=http://host.docker.internal:3100",
+    "-e", "LOKI_URL=http://loki:3100",
     "ghcr.io/lexfrei/mcp-loki:latest"
   ]
 }
@@ -67,6 +91,7 @@ All configuration is done via environment variables:
 
 ```json
 {
+  "command": "podman",
   "args": [
     "run", "--rm", "-i",
     "-e", "LOKI_URL=https://loki.example.com",
@@ -81,6 +106,7 @@ All configuration is done via environment variables:
 
 ```json
 {
+  "command": "podman",
   "args": [
     "run", "--rm", "-i",
     "-e", "LOKI_URL=https://logs-prod-us-central1.grafana.net",

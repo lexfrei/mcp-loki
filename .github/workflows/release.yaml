@@ -80,7 +80,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: digests-${{ steps.platform.outputs.pair }}
           path: /tmp/digests/*
@@ -105,7 +105,7 @@ jobs:
           echo "Version: ${VERSION}"
 
       - name: Download digests
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: digests-*
           path: /tmp/digests

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cockroachdb/errors"
 	"github.com/lexfrei/mcp-loki/internal/loki"
 	"github.com/lexfrei/mcp-loki/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -122,5 +123,33 @@ func TestStatsHandler_MissingQuery(t *testing.T) {
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
 	if err == nil && (result == nil || !result.IsError) {
 		t.Error("expected error for missing query")
+	}
+
+	if !errors.Is(err, tools.ErrValidation) {
+		t.Errorf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestStatsHandler_LokiError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"status":"error","error":"internal"}`))
+	}))
+	defer srv.Close()
+
+	client := loki.NewClient(srv.URL, "", "", "", "")
+	handler := tools.NewStatsHandler(client)
+
+	params := tools.StatsParams{
+		Query: `{app="test"}`,
+	}
+
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
+	if err == nil {
+		t.Fatal("expected error for Loki failure")
+	}
+
+	if !errors.Is(err, tools.ErrLokiRequest) {
+		t.Errorf("expected ErrLokiRequest, got: %v", err)
 	}
 }

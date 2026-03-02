@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cockroachdb/errors"
 	"github.com/lexfrei/mcp-loki/internal/loki"
 	"github.com/lexfrei/mcp-loki/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -66,6 +67,10 @@ func TestConfigHandler_Error(t *testing.T) {
 	// Should return error
 	if err == nil && (result == nil || !result.IsError) {
 		t.Error("expected error for failed config request")
+	}
+
+	if !errors.Is(err, tools.ErrLokiRequest) {
+		t.Errorf("expected ErrLokiRequest, got: %v", err)
 	}
 }
 

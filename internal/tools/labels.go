@@ -40,12 +40,12 @@ func NewLabelsHandler(client *loki.Client) mcp.ToolHandlerFor[LabelsParams, Labe
 	) (*mcp.CallToolResult, LabelsResult, error) {
 		start, err := parseTimeOrDefault(params.Start, time.Now().Add(-time.Hour))
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, errors.Wrap(err, "invalid start time")
+			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, validationErr(errors.Wrap(err, "invalid start time"))
 		}
 
 		end, err := parseTimeOrDefault(params.End, time.Now())
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, errors.Wrap(err, "invalid end time")
+			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, validationErr(errors.Wrap(err, "invalid end time"))
 		}
 
 		var resp *loki.LabelsResponse
@@ -61,7 +61,7 @@ func NewLabelsHandler(client *loki.Client) mcp.ToolHandlerFor[LabelsParams, Labe
 		}
 
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, errors.Wrap(err, "labels request failed")
+			return &mcp.CallToolResult{IsError: true}, LabelsResult{}, lokiErr("labels request failed", err)
 		}
 
 		result := LabelsResult{

@@ -3,8 +3,6 @@ package tools
 import (
 	"context"
 
-	"github.com/cockroachdb/errors"
-
 	"github.com/lexfrei/mcp-loki/internal/loki"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -26,7 +24,7 @@ func NewConfigHandler(client *loki.Client) mcp.ToolHandlerFor[ConfigParams, Conf
 	) (*mcp.CallToolResult, ConfigResult, error) {
 		config, err := client.Config(ctx)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, ConfigResult{}, errors.Wrap(err, "failed to get config")
+			return &mcp.CallToolResult{IsError: true}, ConfigResult{}, lokiErr("failed to get config", err)
 		}
 
 		return nil, ConfigResult{

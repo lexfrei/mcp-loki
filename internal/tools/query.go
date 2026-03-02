@@ -53,17 +53,17 @@ func NewQueryHandler(client *loki.Client) mcp.ToolHandlerFor[QueryParams, QueryR
 		params QueryParams,
 	) (*mcp.CallToolResult, QueryResult, error) {
 		if params.Query == "" {
-			return &mcp.CallToolResult{IsError: true}, QueryResult{}, ErrQueryRequired
+			return &mcp.CallToolResult{IsError: true}, QueryResult{}, validationErr(ErrQueryRequired)
 		}
 
 		start, err := parseTimeOrDefault(params.Start, time.Now().Add(-time.Hour))
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, QueryResult{}, errors.Wrap(err, "invalid start time")
+			return &mcp.CallToolResult{IsError: true}, QueryResult{}, validationErr(errors.Wrap(err, "invalid start time"))
 		}
 
 		end, err := parseTimeOrDefault(params.End, time.Now())
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, QueryResult{}, errors.Wrap(err, "invalid end time")
+			return &mcp.CallToolResult{IsError: true}, QueryResult{}, validationErr(errors.Wrap(err, "invalid end time"))
 		}
 
 		limit := params.Limit
@@ -78,7 +78,7 @@ func NewQueryHandler(client *loki.Client) mcp.ToolHandlerFor[QueryParams, QueryR
 
 		resp, err := client.QueryRange(ctx, params.Query, start, end, limit, direction)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, QueryResult{}, errors.Wrap(err, "query failed")
+			return &mcp.CallToolResult{IsError: true}, QueryResult{}, lokiErr("query failed", err)
 		}
 
 		output := loki.FormatQueryResult(resp)

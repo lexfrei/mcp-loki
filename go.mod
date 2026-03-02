@@ -1,6 +1,6 @@
 module github.com/lexfrei/mcp-loki
 
-go 1.25.5
+go 1.26.0
 
 require (
 	github.com/cockroachdb/errors v1.12.0

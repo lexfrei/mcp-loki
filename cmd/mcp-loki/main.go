@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -50,7 +51,17 @@ func run() error {
 			Name:    serverName,
 			Version: version,
 		},
-		nil,
+		&mcp.ServerOptions{
+			Instructions: "MCP server for querying Grafana Loki. " +
+				"Provides tools to execute LogQL queries, browse labels and series, " +
+				"view index statistics, check Loki readiness, and retrieve configuration. " +
+				"Requires LOKI_URL environment variable (defaults to http://localhost:3100). " +
+				"Supports basic auth (LOKI_USERNAME/LOKI_PASSWORD), " +
+				"bearer token (LOKI_TOKEN), and multi-tenancy (LOKI_ORG_ID).",
+			Logger: slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+				Level: slog.LevelInfo,
+			})),
+		},
 	)
 
 	registerTools(server, lokiClient)

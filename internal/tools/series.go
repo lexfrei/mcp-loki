@@ -38,22 +38,22 @@ func NewSeriesHandler(client *loki.Client) mcp.ToolHandlerFor[SeriesParams, Seri
 		params SeriesParams,
 	) (*mcp.CallToolResult, SeriesResult, error) {
 		if len(params.Match) == 0 {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, ErrMatchRequired
+			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(ErrMatchRequired)
 		}
 
 		start, err := parseTimeOrDefault(params.Start, time.Now().Add(-time.Hour))
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, errors.Wrap(err, "invalid start time")
+			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(errors.Wrap(err, "invalid start time"))
 		}
 
 		end, err := parseTimeOrDefault(params.End, time.Now())
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, errors.Wrap(err, "invalid end time")
+			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(errors.Wrap(err, "invalid end time"))
 		}
 
 		resp, err := client.Series(ctx, params.Match, start, end)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, errors.Wrap(err, "series request failed")
+			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, lokiErr("series request failed", err)
 		}
 
 		result := SeriesResult{
@@ -81,11 +81,11 @@ func formatSeriesResult(series []map[string]string) string {
 
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("Found %d series:\n", len(series)))
+	fmt.Fprintf(&builder, "Found %d series:\n", len(series))
 
 	for idx, seriesItem := range series {
 		serialized, _ := json.Marshal(seriesItem)
-		builder.WriteString(fmt.Sprintf("  %d. %s\n", idx+1, string(serialized)))
+		fmt.Fprintf(&builder, "  %d. %s\n", idx+1, string(serialized))
 	}
 
 	return builder.String()

@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/cockroachdb/errors"
 	"github.com/lexfrei/mcp-loki/internal/loki"
 	"github.com/lexfrei/mcp-loki/internal/tools"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -120,5 +121,45 @@ func TestLabelsHandler_WithTimeRange(t *testing.T) {
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
 	if err != nil {
 		t.Fatalf("handler failed: %v", err)
+	}
+}
+
+func TestLabelsHandler_InvalidStartTime(t *testing.T) {
+	client := loki.NewClient("http://localhost:3100", "", "", "", "")
+	handler := tools.NewLabelsHandler(client)
+
+	params := tools.LabelsParams{
+		Start: "not-a-time",
+	}
+
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
+	if err == nil {
+		t.Fatal("expected error for invalid start time")
+	}
+
+	if !errors.Is(err, tools.ErrValidation) {
+		t.Errorf("expected ErrValidation, got: %v", err)
+	}
+}
+
+func TestLabelsHandler_LokiError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`{"status":"error","error":"internal"}`))
+	}))
+	defer srv.Close()
+
+	client := loki.NewClient(srv.URL, "", "", "", "")
+	handler := tools.NewLabelsHandler(client)
+
+	params := tools.LabelsParams{}
+
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
+	if err == nil {
+		t.Fatal("expected error for Loki failure")
+	}
+
+	if !errors.Is(err, tools.ErrLokiRequest) {
+		t.Errorf("expected ErrLokiRequest, got: %v", err)
 	}
 }

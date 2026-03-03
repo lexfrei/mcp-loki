@@ -144,7 +144,7 @@ func (c *Client) Ready(ctx context.Context) error {
 
 	c.setAuthHeaders(req)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.client.Do(req) //nolint:gosec // G704: URL from trusted config, not user input.
 	if err != nil {
 		return errors.Wrap(err, "request failed")
 	}
@@ -166,7 +166,7 @@ func (c *Client) Config(ctx context.Context) (string, error) {
 
 	c.setAuthHeaders(req)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.client.Do(req) //nolint:gosec // G704: URL from trusted config, not user input.
 	if err != nil {
 		return "", errors.Wrap(err, "request failed")
 	}
@@ -194,7 +194,7 @@ func (c *Client) doRequest(ctx context.Context, path string, params url.Values, 
 
 	c.setAuthHeaders(req)
 
-	resp, err := c.client.Do(req)
+	resp, err := c.client.Do(req) //nolint:gosec // G704: URL from trusted config, not user input.
 	if err != nil {
 		return errors.Wrap(err, "request failed")
 	}

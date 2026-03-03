@@ -81,11 +81,11 @@ func formatSeriesResult(series []map[string]string) string {
 
 	var builder strings.Builder
 
-	builder.WriteString(fmt.Sprintf("Found %d series:\n", len(series)))
+	fmt.Fprintf(&builder, "Found %d series:\n", len(series))
 
 	for idx, seriesItem := range series {
 		serialized, _ := json.Marshal(seriesItem)
-		builder.WriteString(fmt.Sprintf("  %d. %s\n", idx+1, string(serialized)))
+		fmt.Fprintf(&builder, "  %d. %s\n", idx+1, string(serialized))
 	}
 
 	return builder.String()

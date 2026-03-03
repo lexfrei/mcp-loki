@@ -91,9 +91,9 @@ func FormatLabelsResult(result *LabelsResult) string {
 	var builder strings.Builder
 
 	if result.Type == resultTypeLabelNames {
-		builder.WriteString(fmt.Sprintf("Found %d label names:\n", result.Count))
+		fmt.Fprintf(&builder, "Found %d label names:\n", result.Count)
 	} else {
-		builder.WriteString(fmt.Sprintf("Found %d values:\n", result.Count))
+		fmt.Fprintf(&builder, "Found %d values:\n", result.Count)
 	}
 
 	for _, label := range result.Labels {

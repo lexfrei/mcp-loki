@@ -1,0 +1,13 @@
+{
+  "name": "mcp-loki",
+  "description": "MCP server for querying Grafana Loki logs. Execute LogQL queries, discover labels, explore series, and get index statistics via the Model Context Protocol.",
+  "version": "1.0.0",
+  "author": {
+    "name": "Aleksei Sviridkin",
+    "email": "f@lex.la"
+  },
+  "homepage": "https://github.com/lexfrei/mcp-loki",
+  "repository": "https://github.com/lexfrei/mcp-loki",
+  "license": "BSD-3-Clause",
+  "keywords": ["loki", "grafana", "logs", "logql", "observability", "monitoring"]
+}

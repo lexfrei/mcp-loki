@@ -1,0 +1,17 @@
+{
+  "mcp-loki": {
+    "command": "docker",
+    "args": [
+      "run", "--rm", "-i",
+      "-e", "LOKI_URL",
+      "-e", "LOKI_USERNAME",
+      "-e", "LOKI_PASSWORD",
+      "-e", "LOKI_TOKEN",
+      "-e", "LOKI_ORG_ID",
+      "ghcr.io/lexfrei/mcp-loki:latest"
+    ],
+    "env": {
+      "LOKI_URL": ""
+    }
+  }
+}

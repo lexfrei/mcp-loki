@@ -1,6 +1,7 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "platformAutomerge": true,
+  "automergeStrategy": "squash",
   "extends": [
     "config:recommended",
     "docker:enableMajor",
@@ -31,9 +32,8 @@
       "automerge": true
     },
     {
-      "description": "Automerge minor updates for GitHub Actions",
+      "description": "Automerge all GitHub Actions updates including major",
       "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch"],
       "automerge": true
     },
     {

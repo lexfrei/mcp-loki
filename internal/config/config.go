@@ -7,7 +7,7 @@ import "os"
 type Config struct {
 	LokiURL  string
 	Username string
-	Password string //nolint:gosec // G117: not serialized to JSON, loaded from env var only.
+	Password string
 	Token    string
 	OrgID    string
 	HTTPPort string

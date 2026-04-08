@@ -41,22 +41,22 @@ func NewStatsHandler(client *loki.Client) mcp.ToolHandlerFor[StatsParams, StatsR
 		params StatsParams,
 	) (*mcp.CallToolResult, StatsResult, error) {
 		if params.Query == "" {
-			return &mcp.CallToolResult{IsError: true}, StatsResult{}, validationErr(ErrQueryRequired)
+			return nil, StatsResult{}, validationErr(ErrQueryRequired)
 		}
 
 		start, err := parseTimeOrDefault(params.Start, time.Now().Add(-time.Hour))
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, StatsResult{}, validationErr(errors.Wrap(err, "invalid start time"))
+			return nil, StatsResult{}, validationErr(errors.Wrap(err, "invalid start time"))
 		}
 
 		end, err := parseTimeOrDefault(params.End, time.Now())
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, StatsResult{}, validationErr(errors.Wrap(err, "invalid end time"))
+			return nil, StatsResult{}, validationErr(errors.Wrap(err, "invalid end time"))
 		}
 
 		resp, err := client.Stats(ctx, params.Query, start, end)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, StatsResult{}, lokiErr("stats request failed", err)
+			return nil, StatsResult{}, lokiErr("stats request failed", err)
 		}
 
 		result := StatsResult{

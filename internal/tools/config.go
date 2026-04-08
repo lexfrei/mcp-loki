@@ -24,7 +24,7 @@ func NewConfigHandler(client *loki.Client) mcp.ToolHandlerFor[ConfigParams, Conf
 	) (*mcp.CallToolResult, ConfigResult, error) {
 		config, err := client.Config(ctx)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, ConfigResult{}, lokiErr("failed to get config", err)
+			return nil, ConfigResult{}, lokiErr("failed to get config", err)
 		}
 
 		return nil, ConfigResult{

@@ -100,8 +100,12 @@ func TestSeriesHandler_MissingMatch(t *testing.T) {
 	}
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
-	if err == nil && (result == nil || !result.IsError) {
+	if err == nil {
 		t.Error("expected error for missing match")
+	}
+
+	if result != nil {
+		t.Error("expected nil CallToolResult on error path")
 	}
 
 	if !errors.Is(err, tools.ErrValidation) {

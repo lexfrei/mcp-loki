@@ -13,6 +13,7 @@ MCP server for querying Grafana Loki logs. Enables LLMs to search and analyze lo
 - **Label Discovery** — List labels and their values for query building
 - **Series Exploration** — Find log streams matching label selectors
 - **Index Statistics** — Get cardinality and size metrics
+- **Prompt Templates** — Ready-made LogQL patterns for common log analysis tasks
 - **Multiple Auth Methods** — Basic auth, Bearer token, multi-tenant (X-Scope-OrgID)
 - **Multi-arch Images** — `linux/amd64` and `linux/arm64`
 - **Signed Images** — Verified with cosign keyless signing
@@ -188,6 +189,45 @@ Get index statistics for a query.
 ```text
 Get stats for nginx logs: query={app="nginx"}
 ```
+
+### loki_ready
+
+Check if Loki is ready to accept requests. No parameters required.
+
+### loki_config
+
+Get Loki server configuration in YAML format. No parameters required.
+
+## Available Prompts
+
+### error_logs
+
+Find error logs for a specific application.
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `app` | Yes | — | Application name to search errors for |
+| `timerange` | No | `1h` | Time range (e.g. `1h`, `30m`, `7d`) |
+
+### rate_query
+
+Calculate the rate of log lines matching a selector.
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `selector` | Yes | — | LogQL stream selector (e.g. `{app="nginx"}`) |
+| `interval` | No | `5m` | Rate interval (e.g. `5m`, `1h`) |
+
+### top_label_values
+
+Find top N values for a label by log volume.
+
+| Argument | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `selector` | Yes | — | LogQL stream selector (e.g. `{app="nginx"}`) |
+| `label` | Yes | — | Label name to group by |
+| `n` | No | `10` | Number of top values to return |
+| `interval` | No | `5m` | Rate interval (e.g. `5m`, `1h`) |
 
 ## Time Formats
 

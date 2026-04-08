@@ -38,22 +38,22 @@ func NewSeriesHandler(client *loki.Client) mcp.ToolHandlerFor[SeriesParams, Seri
 		params SeriesParams,
 	) (*mcp.CallToolResult, SeriesResult, error) {
 		if len(params.Match) == 0 {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(ErrMatchRequired)
+			return nil, SeriesResult{}, validationErr(ErrMatchRequired)
 		}
 
 		start, err := parseTimeOrDefault(params.Start, time.Now().Add(-time.Hour))
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(errors.Wrap(err, "invalid start time"))
+			return nil, SeriesResult{}, validationErr(errors.Wrap(err, "invalid start time"))
 		}
 
 		end, err := parseTimeOrDefault(params.End, time.Now())
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, validationErr(errors.Wrap(err, "invalid end time"))
+			return nil, SeriesResult{}, validationErr(errors.Wrap(err, "invalid end time"))
 		}
 
 		resp, err := client.Series(ctx, params.Match, start, end)
 		if err != nil {
-			return &mcp.CallToolResult{IsError: true}, SeriesResult{}, lokiErr("series request failed", err)
+			return nil, SeriesResult{}, lokiErr("series request failed", err)
 		}
 
 		result := SeriesResult{

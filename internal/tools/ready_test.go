@@ -49,28 +49,27 @@ func TestReadyHandler_NotReady(t *testing.T) {
 	client := loki.NewClient(server.URL, "", "", "", "")
 	handler := tools.NewReadyHandler(client)
 
-	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ReadyParams{})
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ReadyParams{})
+	if err != nil {
+		t.Fatalf("handler should not return error: %v", err)
+	}
 
-	// Should return error or IsError=true, but not panic
-	if err == nil && (result == nil || !result.IsError) {
-		if output.Ready {
-			t.Error("expected Ready=false for unavailable server")
-		}
+	if output.Ready {
+		t.Error("expected Ready=false for unavailable server")
 	}
 }
 
 func TestReadyHandler_ConnectionError(t *testing.T) {
-	// Non-existent server
 	client := loki.NewClient("http://localhost:59999", "", "", "", "")
 	handler := tools.NewReadyHandler(client)
 
-	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ReadyParams{})
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ReadyParams{})
+	if err != nil {
+		t.Fatalf("handler should not return error: %v", err)
+	}
 
-	// Should handle connection error gracefully
-	if err == nil && (result == nil || !result.IsError) {
-		if output.Ready {
-			t.Error("expected Ready=false for connection error")
-		}
+	if output.Ready {
+		t.Error("expected Ready=false for connection error")
 	}
 }
 

@@ -121,8 +121,12 @@ func TestStatsHandler_MissingQuery(t *testing.T) {
 	}
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
-	if err == nil && (result == nil || !result.IsError) {
+	if err == nil {
 		t.Error("expected error for missing query")
+	}
+
+	if result != nil {
+		t.Error("expected nil CallToolResult on error path")
 	}
 
 	if !errors.Is(err, tools.ErrValidation) {

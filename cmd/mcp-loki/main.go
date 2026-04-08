@@ -65,6 +65,7 @@ func run() error {
 	)
 
 	registerTools(server, lokiClient)
+	registerPrompts(server)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -96,6 +97,12 @@ func registerTools(server *mcp.Server, client *loki.Client) {
 	mcp.AddTool(server, tools.StatsTool(), tools.NewStatsHandler(client))
 	mcp.AddTool(server, tools.ReadyTool(), tools.NewReadyHandler(client))
 	mcp.AddTool(server, tools.ConfigTool(), tools.NewConfigHandler(client))
+}
+
+func registerPrompts(server *mcp.Server) {
+	server.AddPrompt(tools.ErrorLogsPrompt(), tools.ErrorLogsHandler())
+	server.AddPrompt(tools.RateQueryPrompt(), tools.RateQueryHandler())
+	server.AddPrompt(tools.TopLabelValuesPrompt(), tools.TopLabelValuesHandler())
 }
 
 func runHTTPServer(ctx context.Context, server *mcp.Server, port string) {

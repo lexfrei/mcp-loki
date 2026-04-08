@@ -64,9 +64,12 @@ func TestConfigHandler_Error(t *testing.T) {
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ConfigParams{})
 
-	// Should return error
-	if err == nil && (result == nil || !result.IsError) {
+	if err == nil {
 		t.Error("expected error for failed config request")
+	}
+
+	if result != nil {
+		t.Error("expected nil CallToolResult on error path")
 	}
 
 	if !errors.Is(err, tools.ErrLokiRequest) {
@@ -81,9 +84,12 @@ func TestConfigHandler_ConnectionError(t *testing.T) {
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ConfigParams{})
 
-	// Should handle connection error gracefully
-	if err == nil && (result == nil || !result.IsError) {
+	if err == nil {
 		t.Error("expected error for connection error")
+	}
+
+	if result != nil {
+		t.Error("expected nil CallToolResult on error path")
 	}
 }
 

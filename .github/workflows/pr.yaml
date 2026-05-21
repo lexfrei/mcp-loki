@@ -114,7 +114,7 @@ jobs:
 
       - name: Build and Push to ttl.sh by digest
         id: build
-        uses: docker/build-push-action@v7.1.0
+        uses: docker/build-push-action@v7.2.0
         with:
           context: .
           file: ./Containerfile

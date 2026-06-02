@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -43,7 +43,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
@@ -105,7 +105,7 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.2
+        uses: actions/checkout@v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 

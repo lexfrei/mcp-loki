@@ -56,7 +56,8 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9.2.1
         with:
-          version: latest
+          # renovate: datasource=github-releases depName=golangci/golangci-lint
+          version: v2.12.2
           args: --timeout=5m
 
       - name: markdownlint

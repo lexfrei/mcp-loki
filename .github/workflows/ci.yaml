@@ -35,3 +35,6 @@ jobs:
           go-version-file: go.mod
 
       - uses: golangci/golangci-lint-action@v9.2.1
+        with:
+          # renovate: datasource=github-releases depName=golangci/golangci-lint
+          version: v2.12.2

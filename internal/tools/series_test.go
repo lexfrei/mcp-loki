@@ -25,10 +25,10 @@ func TestSeriesHandler_Success(t *testing.T) {
 		}
 
 		resp := loki.SeriesResponse{
-			Status: "success",
+			Status: statusSuccess,
 			Data: []map[string]string{
-				{"app": "nginx", "env": "prod"},
-				{"app": "nginx", "env": "staging"},
+				{argApp: valueNginx, argEnv: "prod"},
+				{argApp: valueNginx, argEnv: "staging"},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -44,7 +44,7 @@ func TestSeriesHandler_Success(t *testing.T) {
 	handler := tools.NewSeriesHandler(client)
 
 	params := tools.SeriesParams{
-		Match: []string{`{app="nginx"}`},
+		Match: []string{selectorNginx},
 	}
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -68,7 +68,7 @@ func TestSeriesHandler_MultipleMatchers(t *testing.T) {
 			t.Errorf("expected 2 match[] parameters, got %d", len(matches))
 		}
 
-		resp := loki.SeriesResponse{Status: "success", Data: []map[string]string{}}
+		resp := loki.SeriesResponse{Status: statusSuccess, Data: []map[string]string{}}
 		w.Header().Set("Content-Type", "application/json")
 
 		err := json.NewEncoder(w).Encode(resp)
@@ -82,7 +82,7 @@ func TestSeriesHandler_MultipleMatchers(t *testing.T) {
 	handler := tools.NewSeriesHandler(client)
 
 	params := tools.SeriesParams{
-		Match: []string{`{app="nginx"}`, `{app="redis"}`},
+		Match: []string{selectorNginx, `{app="redis"}`},
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -124,7 +124,7 @@ func TestSeriesHandler_LokiError(t *testing.T) {
 	handler := tools.NewSeriesHandler(client)
 
 	params := tools.SeriesParams{
-		Match: []string{`{app="test"}`},
+		Match: []string{selectorTest},
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)

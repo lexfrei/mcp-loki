@@ -7,7 +7,17 @@ import (
 	"github.com/lexfrei/mcp-loki/internal/loki"
 )
 
-const appNginx = "nginx"
+const (
+	appNginx = "nginx"
+
+	resultTypeStreams = "streams"
+	statusError       = "error"
+	errorTypeBadData  = "bad_data"
+
+	labelApp  = "app"
+	labelEnv  = "env"
+	labelHost = "host"
+)
 
 func TestQueryResponse_Unmarshal_Streams(t *testing.T) {
 	raw := `{
@@ -36,7 +46,7 @@ func TestQueryResponse_Unmarshal_Streams(t *testing.T) {
 		t.Errorf("expected status success, got %s", resp.Status)
 	}
 
-	if resp.Data.ResultType != "streams" {
+	if resp.Data.ResultType != resultTypeStreams {
 		t.Errorf("expected resultType streams, got %s", resp.Data.ResultType)
 	}
 
@@ -45,8 +55,8 @@ func TestQueryResponse_Unmarshal_Streams(t *testing.T) {
 	}
 
 	stream := resp.Data.Result[0]
-	if stream.Stream["app"] != appNginx {
-		t.Errorf("expected stream app=nginx, got %s", stream.Stream["app"])
+	if stream.Stream[labelApp] != appNginx {
+		t.Errorf("expected stream app=nginx, got %s", stream.Stream[labelApp])
 	}
 
 	values := stream.GetValues()
@@ -107,7 +117,7 @@ func TestLabelsResponse_Unmarshal(t *testing.T) {
 		t.Fatalf("expected 4 labels, got %d", len(resp.Data))
 	}
 
-	expected := []string{"app", "env", "host", "level"}
+	expected := []string{labelApp, labelEnv, labelHost, "level"}
 	for i, label := range expected {
 		if resp.Data[i] != label {
 			t.Errorf("expected label %s at index %d, got %s", label, i, resp.Data[i])
@@ -138,12 +148,12 @@ func TestSeriesResponse_Unmarshal(t *testing.T) {
 		t.Fatalf("expected 2 series, got %d", len(resp.Data))
 	}
 
-	if resp.Data[0]["app"] != appNginx {
-		t.Errorf("expected app=nginx, got %s", resp.Data[0]["app"])
+	if resp.Data[0][labelApp] != appNginx {
+		t.Errorf("expected app=nginx, got %s", resp.Data[0][labelApp])
 	}
 
-	if resp.Data[1]["env"] != "staging" {
-		t.Errorf("expected env=staging, got %s", resp.Data[1]["env"])
+	if resp.Data[1][labelEnv] != "staging" {
+		t.Errorf("expected env=staging, got %s", resp.Data[1][labelEnv])
 	}
 }
 
@@ -198,11 +208,11 @@ func TestErrorResponse_Unmarshal(t *testing.T) {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}
 
-	if resp.Status != "error" {
+	if resp.Status != statusError {
 		t.Errorf("expected status error, got %s", resp.Status)
 	}
 
-	if resp.ErrorType != "bad_data" {
+	if resp.ErrorType != errorTypeBadData {
 		t.Errorf("expected errorType bad_data, got %s", resp.ErrorType)
 	}
 

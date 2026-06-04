@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Run Trivy vulnerability scanner (filesystem)
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@bfa4b33a029b9aa80ddb784b45574c30e072c59e # master
         with:
           scan-type: 'fs'
           scan-ref: '.'
@@ -33,7 +33,7 @@ jobs:
           severity: 'CRITICAL,HIGH,MEDIUM'
 
       - name: Upload Trivy filesystem results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v4.36.1
+        uses: github/codeql-action/upload-sarif@87557b9c84dde89fdd9b10e88954ac2f4248e463 # v4.36.1
         with:
           sarif_file: 'trivy-fs-results.sarif'
           category: 'trivy-filesystem'
@@ -43,25 +43,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Go
-        uses: actions/setup-go@v6.4.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: '1.26.4'
           cache: true
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v9.2.1
+        uses: golangci/golangci-lint-action@82606bf257cbaff209d206a39f5134f0cfbfd2ee # v9.2.1
         with:
           # renovate: datasource=github-releases depName=golangci/golangci-lint
           version: v2.12.2
           args: --timeout=5m
 
       - name: markdownlint
-        uses: DavidAnson/markdownlint-cli2-action@v23.2.0
+        uses: DavidAnson/markdownlint-cli2-action@ded1f9488f68a970bc66ea5619e13e9b52e601cd # v23.2.0
         with:
           globs: '**/*.md'
 
@@ -70,12 +70,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Go
-        uses: actions/setup-go@v6.4.0
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
           go-version: '1.26.4'
           cache: true
@@ -84,7 +84,7 @@ jobs:
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v6.0.1
+        uses: codecov/codecov-action@e79a6962e0d4c0c17b229090214935d2e33f8354 # v6.0.1
         with:
           files: ./coverage.out
           flags: unittests
@@ -106,16 +106,16 @@ jobs:
             runner: ubuntu-24.04-arm
     steps:
       - name: Checkout PR code
-        uses: actions/checkout@v6.0.3
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.1.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Build and Push to ttl.sh by digest
         id: build
-        uses: docker/build-push-action@v7.2.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: ./Containerfile
@@ -133,7 +133,7 @@ jobs:
           touch "/tmp/digests/${digest#sha256:}"
 
       - name: Upload digest
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: digests-${{ matrix.arch }}
           path: /tmp/digests/*
@@ -146,14 +146,14 @@ jobs:
     needs: build-and-push
     steps:
       - name: Download digests
-        uses: actions/download-artifact@v8.0.1
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           pattern: digests-*
           path: /tmp/digests
           merge-multiple: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4.1.0
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # v4.1.0
 
       - name: Create manifest list and push
         working-directory: /tmp/digests
@@ -211,7 +211,7 @@ jobs:
     steps:
       - name: Check if first build
         id: first_build
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           result-encoding: string
           script: |
@@ -226,7 +226,7 @@ jobs:
 
       - name: Add Container Available label
         if: steps.first_build.outputs.result == 'true'
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             github.rest.issues.addLabels({
@@ -238,7 +238,7 @@ jobs:
 
       - name: Comment on PR (first time only)
         if: steps.first_build.outputs.result == 'true'
-        uses: actions/github-script@v9.0.0
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           script: |
             const prNumber = context.payload.pull_request.number;

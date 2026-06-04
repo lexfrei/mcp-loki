@@ -4,7 +4,7 @@ go 1.26.4
 
 require (
 	github.com/cockroachdb/errors v1.13.0
-	github.com/modelcontextprotocol/go-sdk v1.5.0
+	github.com/modelcontextprotocol/go-sdk v1.6.1
 )
 
 require (
@@ -12,7 +12,7 @@ require (
 	github.com/cockroachdb/redact v1.1.6 // indirect
 	github.com/getsentry/sentry-go v0.46.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
-	github.com/google/jsonschema-go v0.4.2 // indirect
+	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

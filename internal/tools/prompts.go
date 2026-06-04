@@ -11,7 +11,17 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-const defaultInterval = "5m"
+const (
+	defaultInterval = "5m"
+
+	argSelector = "selector"
+	argInterval = "interval"
+
+	roleUser = "user"
+
+	descSelector = "LogQL stream selector (e.g. {app=\"nginx\"})"
+	descInterval = "Rate interval (e.g. 5m, 1h). Default: 5m"
+)
 
 var (
 	relativeDurationRe = regexp.MustCompile(`^\d+[smhdw]$`)
@@ -90,7 +100,7 @@ func ErrorLogsHandler() mcp.PromptHandler {
 			Description: fmt.Sprintf("Error logs for %s (last %s)", app, timerange),
 			Messages: []*mcp.PromptMessage{
 				{
-					Role: "user",
+					Role: roleUser,
 					Content: &mcp.TextContent{
 						Text: fmt.Sprintf(
 							"Use the loki_query tool to find error logs:\n\n"+
@@ -114,13 +124,13 @@ func RateQueryPrompt() *mcp.Prompt {
 		Description: "Calculate the rate of log lines matching a selector",
 		Arguments: []*mcp.PromptArgument{
 			{
-				Name:        "selector",
-				Description: "LogQL stream selector (e.g. {app=\"nginx\"})",
+				Name:        argSelector,
+				Description: descSelector,
 				Required:    true,
 			},
 			{
-				Name:        "interval",
-				Description: "Rate interval (e.g. 5m, 1h). Default: 5m",
+				Name:        argInterval,
+				Description: descInterval,
 				Required:    false,
 			},
 		},
@@ -130,7 +140,7 @@ func RateQueryPrompt() *mcp.Prompt {
 // RateQueryHandler returns the handler for the rate_query prompt.
 func RateQueryHandler() mcp.PromptHandler {
 	return func(_ context.Context, req *mcp.GetPromptRequest) (*mcp.GetPromptResult, error) {
-		selector := req.Params.Arguments["selector"]
+		selector := req.Params.Arguments[argSelector]
 		if selector == "" {
 			return nil, validationErr(errors.New("selector argument is required"))
 		}
@@ -140,7 +150,7 @@ func RateQueryHandler() mcp.PromptHandler {
 			return nil, err
 		}
 
-		interval := req.Params.Arguments["interval"]
+		interval := req.Params.Arguments[argInterval]
 		if interval == "" {
 			interval = defaultInterval
 		} else {
@@ -156,7 +166,7 @@ func RateQueryHandler() mcp.PromptHandler {
 			Description: fmt.Sprintf("Rate query for %s over %s intervals", selector, interval),
 			Messages: []*mcp.PromptMessage{
 				{
-					Role: "user",
+					Role: roleUser,
 					Content: &mcp.TextContent{
 						Text: fmt.Sprintf(
 							"Use the loki_query tool to calculate log rate:\n\n"+
@@ -179,8 +189,8 @@ func TopLabelValuesPrompt() *mcp.Prompt {
 		Description: "Find top N values for a label by log volume",
 		Arguments: []*mcp.PromptArgument{
 			{
-				Name:        "selector",
-				Description: "LogQL stream selector (e.g. {app=\"nginx\"})",
+				Name:        argSelector,
+				Description: descSelector,
 				Required:    true,
 			},
 			{
@@ -194,8 +204,8 @@ func TopLabelValuesPrompt() *mcp.Prompt {
 				Required:    false,
 			},
 			{
-				Name:        "interval",
-				Description: "Rate interval (e.g. 5m, 1h). Default: 5m",
+				Name:        argInterval,
+				Description: descInterval,
 				Required:    false,
 			},
 		},
@@ -207,7 +217,7 @@ type topLabelValuesArgs struct {
 }
 
 func parseTopLabelValuesArgs(args map[string]string) (*topLabelValuesArgs, error) {
-	selector := args["selector"]
+	selector := args[argSelector]
 	if selector == "" {
 		return nil, validationErr(errors.New("selector argument is required"))
 	}
@@ -239,7 +249,7 @@ func parseTopLabelValuesArgs(args map[string]string) (*topLabelValuesArgs, error
 		}
 	}
 
-	interval := args["interval"]
+	interval := args[argInterval]
 	if interval == "" {
 		interval = defaultInterval
 	} else {
@@ -267,7 +277,7 @@ func TopLabelValuesHandler() mcp.PromptHandler {
 			Description: fmt.Sprintf("Top %s %s values by log volume", parsed.n, parsed.label),
 			Messages: []*mcp.PromptMessage{
 				{
-					Role: "user",
+					Role: roleUser,
 					Content: &mcp.TextContent{
 						Text: fmt.Sprintf(
 							"Use the loki_query tool to find top label values:\n\n"+

@@ -26,10 +26,10 @@ func TestClient_QueryRange(t *testing.T) {
 		resp := loki.QueryResponse{
 			Status: statusSuccess,
 			Data: loki.QueryData{
-				ResultType: "streams",
+				ResultType: resultTypeStreams,
 				Result: []loki.StreamResult{
 					{
-						Stream: map[string]string{"app": "test"},
+						Stream: map[string]string{labelApp: "test"},
 						Values: [][]json.RawMessage{
 							{json.RawMessage(`"1609459200000000000"`), json.RawMessage(`"test log"`)},
 						},
@@ -71,7 +71,7 @@ func TestClient_Labels(t *testing.T) {
 
 		resp := loki.LabelsResponse{
 			Status: statusSuccess,
-			Data:   []string{"app", "env", "host"},
+			Data:   []string{labelApp, labelEnv, labelHost},
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -107,7 +107,7 @@ func TestClient_LabelValues(t *testing.T) {
 
 		resp := loki.LabelsResponse{
 			Status: statusSuccess,
-			Data:   []string{"nginx", "redis", "postgres"},
+			Data:   []string{appNginx, "redis", "postgres"},
 		}
 
 		w.Header().Set("Content-Type", "application/json")
@@ -121,7 +121,7 @@ func TestClient_LabelValues(t *testing.T) {
 
 	client := loki.NewClient(server.URL, "", "", "", "")
 
-	resp, err := client.LabelValues(context.Background(), "app", time.Now().Add(-time.Hour), time.Now())
+	resp, err := client.LabelValues(context.Background(), labelApp, time.Now().Add(-time.Hour), time.Now())
 	if err != nil {
 		t.Fatalf("LabelValues failed: %v", err)
 	}
@@ -140,7 +140,7 @@ func TestClient_Series(t *testing.T) {
 		resp := loki.SeriesResponse{
 			Status: statusSuccess,
 			Data: []map[string]string{
-				{"app": "nginx", "env": "prod"},
+				{labelApp: appNginx, labelEnv: "prod"},
 			},
 		}
 
@@ -291,8 +291,8 @@ func TestClient_ErrorResponse(t *testing.T) {
 		w.WriteHeader(http.StatusBadRequest)
 
 		resp := loki.ErrorResponse{
-			Status:    "error",
-			ErrorType: "bad_data",
+			Status:    statusError,
+			ErrorType: errorTypeBadData,
 			Error:     "invalid query",
 		}
 

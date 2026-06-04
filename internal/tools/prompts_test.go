@@ -16,6 +16,34 @@ const (
 	promptTopLabelValues = "top_label_values"
 )
 
+// Shared test fixtures and argument names for the tools package tests.
+const (
+	statusSuccess   = "success"
+	resultTypeValue = "streams"
+	errorTypeData   = "invalid"
+
+	argApp       = "app"
+	argSelector  = "selector"
+	argInterval  = "interval"
+	argLabel     = "label"
+	argStatus    = "status"
+	argEnv       = "env"
+	argTimerange = "timerange"
+
+	caseRFC3339    = "RFC3339"
+	caseNowKeyword = "now keyword"
+
+	valueNginx        = "nginx"
+	selectorNginx     = `{app="nginx"}`
+	selectorTest      = `{app="test"}`
+	timerange1h       = "1h"
+	timerange30m      = "30m"
+	timeNow           = "now"
+	timeNotParsable   = "not-a-time"
+	timeRandomString  = "random string"
+	timeRFC3339Sample = "2024-01-01T00:00:00Z"
+)
+
 func newPromptRequest(name string, args map[string]string) *mcp.GetPromptRequest {
 	return &mcp.GetPromptRequest{
 		Params: &mcp.GetPromptParams{
@@ -43,7 +71,7 @@ func TestErrorLogsPrompt_Definition(t *testing.T) {
 	var hasApp bool
 
 	for _, arg := range prompt.Arguments {
-		if arg.Name == "app" {
+		if arg.Name == argApp {
 			hasApp = true
 
 			if !arg.Required {
@@ -61,7 +89,7 @@ func TestErrorLogsPrompt_Handler(t *testing.T) {
 	handler := tools.ErrorLogsHandler()
 
 	req := newPromptRequest(promptErrorLogs, map[string]string{
-		"app": "nginx",
+		argApp: valueNginx,
 	})
 
 	result, err := handler(context.Background(), req)
@@ -83,7 +111,7 @@ func TestErrorLogsPrompt_Handler(t *testing.T) {
 		t.Fatalf("expected TextContent, got %T", msg.Content)
 	}
 
-	if !strings.Contains(textContent.Text, `{app="nginx"}`) {
+	if !strings.Contains(textContent.Text, selectorNginx) {
 		t.Errorf("expected LogQL with app=nginx, got: %s", textContent.Text)
 	}
 
@@ -96,7 +124,7 @@ func TestErrorLogsPrompt_DefaultTimerange(t *testing.T) {
 	handler := tools.ErrorLogsHandler()
 
 	req := newPromptRequest(promptErrorLogs, map[string]string{
-		"app": "nginx",
+		argApp: valueNginx,
 	})
 
 	result, err := handler(context.Background(), req)
@@ -133,8 +161,8 @@ func TestErrorLogsPrompt_CustomTimerange(t *testing.T) {
 	handler := tools.ErrorLogsHandler()
 
 	req := newPromptRequest(promptErrorLogs, map[string]string{
-		"app":       "nginx",
-		"timerange": "30m",
+		argApp:       valueNginx,
+		argTimerange: timerange30m,
 	})
 
 	result, err := handler(context.Background(), req)
@@ -159,16 +187,16 @@ func TestErrorLogsPrompt_InvalidTimerange(t *testing.T) {
 		name      string
 		timerange string
 	}{
-		{"random string", "banana"},
-		{"RFC3339", "2024-01-01T00:00:00Z"},
-		{"now keyword", "now"},
+		{timeRandomString, "banana"},
+		{caseRFC3339, timeRFC3339Sample},
+		{caseNowKeyword, timeNow},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := newPromptRequest(promptErrorLogs, map[string]string{
-				"app":       "nginx",
-				"timerange": tt.timerange,
+				argApp:       valueNginx,
+				argTimerange: tt.timerange,
 			})
 
 			_, err := handler(context.Background(), req)
@@ -197,7 +225,7 @@ func TestRateQueryPrompt_Definition(t *testing.T) {
 	var hasSelector bool
 
 	for _, arg := range prompt.Arguments {
-		if arg.Name == "selector" {
+		if arg.Name == argSelector {
 			hasSelector = true
 
 			if !arg.Required {
@@ -215,7 +243,7 @@ func TestRateQueryPrompt_Handler(t *testing.T) {
 	handler := tools.RateQueryHandler()
 
 	req := newPromptRequest(promptRateQuery, map[string]string{
-		"selector": `{app="nginx"}`,
+		argSelector: selectorNginx,
 	})
 
 	result, err := handler(context.Background(), req)
@@ -245,8 +273,8 @@ func TestRateQueryPrompt_CustomInterval(t *testing.T) {
 	handler := tools.RateQueryHandler()
 
 	req := newPromptRequest(promptRateQuery, map[string]string{
-		"selector": `{app="nginx"}`,
-		"interval": "15m",
+		argSelector: selectorNginx,
+		argInterval: "15m",
 	})
 
 	result, err := handler(context.Background(), req)
@@ -286,16 +314,16 @@ func TestRateQueryPrompt_InvalidInterval(t *testing.T) {
 		name     string
 		interval string
 	}{
-		{"random string", "foo"},
-		{"RFC3339", "2024-01-01T00:00:00Z"},
-		{"now keyword", "now"},
+		{timeRandomString, "foo"},
+		{caseRFC3339, timeRFC3339Sample},
+		{caseNowKeyword, timeNow},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := newPromptRequest(promptRateQuery, map[string]string{
-				"selector": `{app="nginx"}`,
-				"interval": tt.interval,
+				argSelector: selectorNginx,
+				argInterval: tt.interval,
 			})
 
 			_, err := handler(context.Background(), req)
@@ -321,7 +349,7 @@ func TestTopLabelValuesPrompt_Definition(t *testing.T) {
 		t.Error("expected non-empty description")
 	}
 
-	requiredArgs := map[string]bool{"selector": false, "label": false}
+	requiredArgs := map[string]bool{argSelector: false, argLabel: false}
 
 	for _, arg := range prompt.Arguments {
 		if _, ok := requiredArgs[arg.Name]; ok {
@@ -344,8 +372,8 @@ func TestTopLabelValuesPrompt_Handler(t *testing.T) {
 	handler := tools.TopLabelValuesHandler()
 
 	req := newPromptRequest(promptTopLabelValues, map[string]string{
-		"selector": `{app="nginx"}`,
-		"label":    "status",
+		argSelector: selectorNginx,
+		argLabel:    argStatus,
 	})
 
 	result, err := handler(context.Background(), req)
@@ -370,7 +398,7 @@ func TestTopLabelValuesPrompt_Handler(t *testing.T) {
 		t.Errorf("expected sum by in query, got: %s", textContent.Text)
 	}
 
-	if !strings.Contains(textContent.Text, "status") {
+	if !strings.Contains(textContent.Text, argStatus) {
 		t.Errorf("expected label name in query, got: %s", textContent.Text)
 	}
 }
@@ -379,9 +407,9 @@ func TestTopLabelValuesPrompt_CustomN(t *testing.T) {
 	handler := tools.TopLabelValuesHandler()
 
 	req := newPromptRequest(promptTopLabelValues, map[string]string{
-		"selector": `{app="nginx"}`,
-		"label":    "status",
-		"n":        "5",
+		argSelector: selectorNginx,
+		argLabel:    argStatus,
+		"n":         "5",
 	})
 
 	result, err := handler(context.Background(), req)
@@ -403,7 +431,7 @@ func TestErrorLogsPrompt_AppWithSpecialChars(t *testing.T) {
 	handler := tools.ErrorLogsHandler()
 
 	req := newPromptRequest(promptErrorLogs, map[string]string{
-		"app": "my-app.v2",
+		argApp: "my-app.v2",
 	})
 
 	result, err := handler(context.Background(), req)
@@ -425,8 +453,8 @@ func TestErrorLogsPrompt_WeekDuration(t *testing.T) {
 	handler := tools.ErrorLogsHandler()
 
 	req := newPromptRequest(promptErrorLogs, map[string]string{
-		"app":       "nginx",
-		"timerange": "1w",
+		argApp:       valueNginx,
+		argTimerange: "1w",
 	})
 
 	result, err := handler(context.Background(), req)
@@ -448,7 +476,7 @@ func TestRateQueryPrompt_MalformedSelector(t *testing.T) {
 	handler := tools.RateQueryHandler()
 
 	req := newPromptRequest(promptRateQuery, map[string]string{
-		"selector": `}) | evil`,
+		argSelector: `}) | evil`,
 	})
 
 	_, err := handler(context.Background(), req)
@@ -465,8 +493,8 @@ func TestTopLabelValuesPrompt_MalformedLabel(t *testing.T) {
 	handler := tools.TopLabelValuesHandler()
 
 	req := newPromptRequest(promptTopLabelValues, map[string]string{
-		"selector": `{app="nginx"}`,
-		"label":    `status"); drop`,
+		argSelector: selectorNginx,
+		argLabel:    `status"); drop`,
 	})
 
 	_, err := handler(context.Background(), req)
@@ -483,8 +511,8 @@ func TestTopLabelValuesPrompt_MalformedSelector(t *testing.T) {
 	handler := tools.TopLabelValuesHandler()
 
 	req := newPromptRequest(promptTopLabelValues, map[string]string{
-		"selector": "not-a-selector",
-		"label":    "status",
+		argSelector: "not-a-selector",
+		argLabel:    argStatus,
 	})
 
 	_, err := handler(context.Background(), req)
@@ -512,9 +540,9 @@ func TestTopLabelValuesPrompt_InvalidN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := newPromptRequest(promptTopLabelValues, map[string]string{
-				"selector": `{app="nginx"}`,
-				"label":    "status",
-				"n":        tt.n,
+				argSelector: selectorNginx,
+				argLabel:    argStatus,
+				"n":         tt.n,
 			})
 
 			_, err := handler(context.Background(), req)
@@ -537,8 +565,8 @@ func TestTopLabelValuesPrompt_MissingArgs(t *testing.T) {
 		args map[string]string
 	}{
 		{"missing both", map[string]string{}},
-		{"missing label", map[string]string{"selector": `{app="nginx"}`}},
-		{"missing selector", map[string]string{"label": "status"}},
+		{"missing label", map[string]string{argSelector: selectorNginx}},
+		{"missing selector", map[string]string{argLabel: argStatus}},
 	}
 
 	for _, tt := range tests {

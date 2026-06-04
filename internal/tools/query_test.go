@@ -16,12 +16,12 @@ import (
 func TestQueryHandler_Success(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		resp := loki.QueryResponse{
-			Status: "success",
+			Status: statusSuccess,
 			Data: loki.QueryData{
-				ResultType: "streams",
+				ResultType: resultTypeValue,
 				Result: []loki.StreamResult{
 					{
-						Stream: map[string]string{"app": "test"},
+						Stream: map[string]string{argApp: "test"},
 						Values: [][]json.RawMessage{
 							{json.RawMessage(`"1609459200000000000"`), json.RawMessage(`"test log line"`)},
 						},
@@ -42,7 +42,7 @@ func TestQueryHandler_Success(t *testing.T) {
 	handler := tools.NewQueryHandler(client)
 
 	params := tools.QueryParams{
-		Query: `{app="test"}`,
+		Query: selectorTest,
 	}
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -65,8 +65,8 @@ func TestQueryHandler_WithTimeRange(t *testing.T) {
 		}
 
 		resp := loki.QueryResponse{
-			Status: "success",
-			Data:   loki.QueryData{ResultType: "streams", Result: []loki.StreamResult{}},
+			Status: statusSuccess,
+			Data:   loki.QueryData{ResultType: resultTypeValue, Result: []loki.StreamResult{}},
 		}
 		w.Header().Set("Content-Type", "application/json")
 
@@ -81,9 +81,9 @@ func TestQueryHandler_WithTimeRange(t *testing.T) {
 	handler := tools.NewQueryHandler(client)
 
 	params := tools.QueryParams{
-		Query: `{app="test"}`,
-		Start: "1h",
-		End:   "now",
+		Query: selectorTest,
+		Start: timerange1h,
+		End:   timeNow,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -98,12 +98,12 @@ func TestQueryHandler_RelativeTime(t *testing.T) {
 		input string
 		valid bool
 	}{
-		{"hours", "1h", true},
-		{"minutes", "30m", true},
+		{"hours", timerange1h, true},
+		{"minutes", timerange30m, true},
 		{"days", "7d", true},
-		{"now", "now", true},
-		{"rfc3339", "2024-01-01T00:00:00Z", true},
-		{"invalid", "invalid", false},
+		{timeNow, timeNow, true},
+		{"rfc3339", timeRFC3339Sample, true},
+		{errorTypeData, errorTypeData, false},
 	}
 
 	for _, tt := range tests {
@@ -147,8 +147,8 @@ func TestQueryHandler_InvalidStartTime(t *testing.T) {
 	handler := tools.NewQueryHandler(client)
 
 	params := tools.QueryParams{
-		Query: `{app="test"}`,
-		Start: "not-a-time",
+		Query: selectorTest,
+		Start: timeNotParsable,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -172,7 +172,7 @@ func TestQueryHandler_LokiError(t *testing.T) {
 	handler := tools.NewQueryHandler(client)
 
 	params := tools.QueryParams{
-		Query: `{app="test"}`,
+		Query: selectorTest,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)

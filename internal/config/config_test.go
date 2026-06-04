@@ -6,6 +6,11 @@ import (
 	"github.com/lexfrei/mcp-loki/internal/config"
 )
 
+const (
+	testUsername = "user"
+	testPassword = "pass"
+)
+
 func TestLoad_Defaults(t *testing.T) {
 	t.Setenv("LOKI_URL", "")
 	t.Setenv("LOKI_USERNAME", "")
@@ -83,9 +88,9 @@ func TestConfig_HasBasicAuth(t *testing.T) {
 		password string
 		want     bool
 	}{
-		{"both set", "user", "pass", true},
-		{"only username", "user", "", false},
-		{"only password", "", "pass", false},
+		{"both set", testUsername, testPassword, true},
+		{"only username", testUsername, "", false},
+		{"only password", "", testPassword, false},
 		{"neither set", "", "", false},
 	}
 

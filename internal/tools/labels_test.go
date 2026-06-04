@@ -20,8 +20,8 @@ func TestLabelsHandler_GetAllLabels(t *testing.T) {
 		}
 
 		resp := loki.LabelsResponse{
-			Status: "success",
-			Data:   []string{"app", "env", "host", "level"},
+			Status: statusSuccess,
+			Data:   []string{argApp, argEnv, "host", "level"},
 		}
 		w.Header().Set("Content-Type", "application/json")
 
@@ -58,8 +58,8 @@ func TestLabelsHandler_GetLabelValues(t *testing.T) {
 		}
 
 		resp := loki.LabelsResponse{
-			Status: "success",
-			Data:   []string{"nginx", "redis", "postgres"},
+			Status: statusSuccess,
+			Data:   []string{valueNginx, "redis", "postgres"},
 		}
 		w.Header().Set("Content-Type", "application/json")
 
@@ -74,7 +74,7 @@ func TestLabelsHandler_GetLabelValues(t *testing.T) {
 	handler := tools.NewLabelsHandler(client)
 
 	params := tools.LabelsParams{
-		Name: "app",
+		Name: argApp,
 	}
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -100,7 +100,7 @@ func TestLabelsHandler_WithTimeRange(t *testing.T) {
 			t.Error("expected start and end parameters")
 		}
 
-		resp := loki.LabelsResponse{Status: "success", Data: []string{}}
+		resp := loki.LabelsResponse{Status: statusSuccess, Data: []string{}}
 		w.Header().Set("Content-Type", "application/json")
 
 		err := json.NewEncoder(w).Encode(resp)
@@ -114,8 +114,8 @@ func TestLabelsHandler_WithTimeRange(t *testing.T) {
 	handler := tools.NewLabelsHandler(client)
 
 	params := tools.LabelsParams{
-		Start: "1h",
-		End:   "now",
+		Start: timerange1h,
+		End:   timeNow,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -129,7 +129,7 @@ func TestLabelsHandler_InvalidStartTime(t *testing.T) {
 	handler := tools.NewLabelsHandler(client)
 
 	params := tools.LabelsParams{
-		Start: "not-a-time",
+		Start: timeNotParsable,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)

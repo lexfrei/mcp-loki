@@ -25,7 +25,7 @@ func TestStatsHandler_Success(t *testing.T) {
 		}
 
 		resp := loki.StatsResponse{
-			Status: "success",
+			Status: statusSuccess,
 			Data: loki.StatsData{
 				Streams: 100,
 				Chunks:  5000,
@@ -46,7 +46,7 @@ func TestStatsHandler_Success(t *testing.T) {
 	handler := tools.NewStatsHandler(client)
 
 	params := tools.StatsParams{
-		Query: `{app="nginx"}`,
+		Query: selectorNginx,
 	}
 
 	result, output, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -85,7 +85,7 @@ func TestStatsHandler_WithTimeRange(t *testing.T) {
 		}
 
 		resp := loki.StatsResponse{
-			Status: "success",
+			Status: statusSuccess,
 			Data:   loki.StatsData{},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -101,9 +101,9 @@ func TestStatsHandler_WithTimeRange(t *testing.T) {
 	handler := tools.NewStatsHandler(client)
 
 	params := tools.StatsParams{
-		Query: `{app="nginx"}`,
+		Query: selectorNginx,
 		Start: "24h",
-		End:   "now",
+		End:   timeNow,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
@@ -145,7 +145,7 @@ func TestStatsHandler_LokiError(t *testing.T) {
 	handler := tools.NewStatsHandler(client)
 
 	params := tools.StatsParams{
-		Query: `{app="test"}`,
+		Query: selectorTest,
 	}
 
 	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)

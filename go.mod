@@ -3,7 +3,7 @@ module github.com/lexfrei/mcp-loki
 go 1.26.4
 
 require (
-	github.com/cockroachdb/errors v1.13.0
+	github.com/cockroachdb/errors v1.14.0
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 )
 

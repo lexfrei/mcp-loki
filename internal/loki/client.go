@@ -48,6 +48,7 @@ func (c *Client) QueryRange(
 	start, end time.Time,
 	limit int,
 	direction string,
+	step string,
 ) (*QueryResponse, error) {
 	params := url.Values{}
 	params.Set("query", query)
@@ -56,9 +57,38 @@ func (c *Client) QueryRange(
 	params.Set("limit", strconv.Itoa(limit))
 	params.Set("direction", direction)
 
+	if step != "" {
+		params.Set("step", step)
+	}
+
 	var resp QueryResponse
 
 	err := c.doRequest(ctx, "/loki/api/v1/query_range", params, &resp)
+	if err != nil {
+		return nil, err
+	}
+
+	return &resp, nil
+}
+
+// QueryInstant executes a LogQL instant query.
+func (c *Client) QueryInstant(
+	ctx context.Context,
+	query string,
+	evalTime time.Time,
+	limit int,
+) (*QueryResponse, error) {
+	params := url.Values{}
+	params.Set("query", query)
+	params.Set("time", strconv.FormatInt(evalTime.UnixNano(), 10))
+
+	if limit > 0 {
+		params.Set("limit", strconv.Itoa(limit))
+	}
+
+	var resp QueryResponse
+
+	err := c.doRequest(ctx, "/loki/api/v1/query", params, &resp)
 	if err != nil {
 		return nil, err
 	}

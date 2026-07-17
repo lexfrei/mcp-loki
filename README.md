@@ -131,14 +131,42 @@ Execute LogQL queries against Loki.
 | `end` | string | No | End time (RFC3339, relative, or `now`) |
 | `limit` | int | No | Maximum entries to return (default: 100) |
 | `direction` | string | No | `forward` or `backward` (default: `backward`) |
+| `step` | string | No | Resolution for metric range queries (e.g. `1m`) |
+| `queryType` | string | No | `range`, `instant`, or `auto` (default: `auto`) |
 
-**Example:**
+**Response fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `resultType` | string | `streams`, `matrix`, or `vector` |
+| `count` | int | Number of log entries or metric series |
+| `truncated` | bool | `true` when stream results were capped by `limit` |
+| `streams` | array | Log entries with `timestamp`, `labels`, and `line` |
+| `series` | array | Metric series with `labels` and `values` or `value` |
+| `output` | string | Deprecated human-readable text (kept for compatibility) |
+
+**Auto routing (`queryType=auto`):**
+
+- Log selectors such as `{app="nginx"} |= "error"` use `query_range`.
+- Metric expressions such as `count_over_time(...)` or `sum by (...)` use `query_range` when `start` and/or `end` are provided, defaulting `step` to `1m`.
+- Metric expressions with no time bounds use the instant query API at `now`.
+
+**Examples:**
 
 ```text
-Query the last hour of nginx error logs:
+Stream logs from the last hour:
 - query: {app="nginx"} |= "error"
 - start: 1h
 - limit: 50
+
+Instant metric query:
+- query: count_over_time({namespace="foo"}[1h])
+- queryType: instant
+
+Metric range query:
+- query: sum by (namespace) (count_over_time({namespace=~".+"}[1h]))
+- start: 6h
+- step: 1m
 ```
 
 ### loki_labels
@@ -196,7 +224,13 @@ Check if Loki is ready to accept requests. No parameters required.
 
 ### loki_config
 
-Get Loki server configuration in YAML format. No parameters required.
+Get Loki server configuration. By default returns the full YAML config from Loki.
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `summary_only` | bool | No | Return a compact JSON summary instead of full YAML |
+
+When `summary_only=true`, the response includes auth, retention, ruler, and selected ingestion/query limits instead of the full configuration dump.
 
 ## Available Prompts
 

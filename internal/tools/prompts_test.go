@@ -18,9 +18,11 @@ const (
 
 // Shared test fixtures and argument names for the tools package tests.
 const (
-	statusSuccess   = "success"
-	resultTypeValue = "streams"
-	errorTypeData   = "invalid"
+	statusSuccess    = "success"
+	resultTypeValue  = "streams"
+	resultTypeMatrix = "matrix"
+	resultTypeVector = "vector"
+	errorTypeData    = "invalid"
 
 	argApp       = "app"
 	argSelector  = "selector"
@@ -34,6 +36,10 @@ const (
 	caseNowKeyword = "now keyword"
 
 	valueNginx        = "nginx"
+	valueFoo          = "foo"
+	namespaceKube     = "kube-system"
+	namespaceFoo      = "foo"
+	labelNamespace    = "namespace"
 	selectorNginx     = `{app="nginx"}`
 	selectorTest      = `{app="test"}`
 	timerange1h       = "1h"
@@ -42,6 +48,9 @@ const (
 	timeNotParsable   = "not-a-time"
 	timeRandomString  = "random string"
 	timeRFC3339Sample = "2024-01-01T00:00:00Z"
+
+	queryTypeRangeParam   = "range"
+	queryTypeInstantParam = "instant"
 )
 
 func newPromptRequest(name string, args map[string]string) *mcp.GetPromptRequest {
@@ -314,7 +323,7 @@ func TestRateQueryPrompt_InvalidInterval(t *testing.T) {
 		name     string
 		interval string
 	}{
-		{timeRandomString, "foo"},
+		{timeRandomString, valueFoo},
 		{caseRFC3339, timeRFC3339Sample},
 		{caseNowKeyword, timeNow},
 	}

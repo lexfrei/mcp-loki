@@ -12,6 +12,101 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func TestConfigHandler_SummaryOnly(t *testing.T) {
+	configYAML := `auth_enabled: true
+ruler:
+  enable_api: true
+limits_config:
+  retention_period: 168h
+  ingestion_rate_mb: 4
+  ingestion_burst_size_mb: 6
+  max_query_length: 721h
+  max_query_parallelism: 32
+  max_entries_limit_per_query: 5000
+compactor:
+  retention_enabled: true`
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/yaml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(configYAML))
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+	handler := tools.NewConfigHandler(client)
+
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ConfigParams{SummaryOnly: true})
+	if err != nil {
+		t.Fatalf("handler failed: %v", err)
+	}
+
+	if output.Config != "" {
+		t.Error("expected empty full config in summary mode")
+	}
+
+	if output.Summary == nil {
+		t.Fatal("expected summary")
+	}
+
+	if !output.Summary.AuthEnabled {
+		t.Error("expected auth_enabled true")
+	}
+
+	if !output.Summary.Ruler.APIEnabled {
+		t.Error("expected ruler API enabled")
+	}
+
+	if output.Summary.Retention.Period != "168h" {
+		t.Errorf("expected retention period 168h, got %s", output.Summary.Retention.Period)
+	}
+
+	if output.Summary.Limits.MaxQueryLength != "721h" {
+		t.Errorf("expected max query length 721h, got %s", output.Summary.Limits.MaxQueryLength)
+	}
+
+	if output.Summary.Limits.MaxEntriesLimit != 5000 {
+		t.Errorf("expected max entries limit 5000, got %d", output.Summary.Limits.MaxEntriesLimit)
+	}
+
+	if !output.Summary.Retention.Enabled {
+		t.Error("expected compactor retention enabled")
+	}
+
+	if output.Summary.Limits.IngestionRateMB != 4 {
+		t.Errorf("expected ingestion rate 4, got %v", output.Summary.Limits.IngestionRateMB)
+	}
+
+	if output.Summary.Limits.IngestionBurstSizeMB != 6 {
+		t.Errorf("expected ingestion burst 6, got %v", output.Summary.Limits.IngestionBurstSizeMB)
+	}
+
+	if output.Summary.Limits.MaxQueryParallelism != 32 {
+		t.Errorf("expected max query parallelism 32, got %d", output.Summary.Limits.MaxQueryParallelism)
+	}
+}
+
+func TestConfigHandler_SummaryOnlyInvalidYAML(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/yaml")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("limits_config: [unterminated"))
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+	handler := tools.NewConfigHandler(client)
+
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.ConfigParams{SummaryOnly: true})
+	if err == nil {
+		t.Fatal("expected error for invalid YAML")
+	}
+
+	if !errors.Is(err, tools.ErrLokiRequest) {
+		t.Errorf("expected ErrLokiRequest, got: %v", err)
+	}
+}
+
 func TestConfigHandler_Success(t *testing.T) {
 	configYAML := `server:
   http_listen_port: 3100

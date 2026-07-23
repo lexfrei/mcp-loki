@@ -11,6 +11,10 @@ const (
 	appNginx = "nginx"
 
 	resultTypeStreams = "streams"
+	resultTypeMatrix  = "matrix"
+	resultTypeVector  = "vector"
+	timestampSample   = "2021-01-01T00:00:00Z"
+	namespaceKube     = "kube-system"
 	statusError       = "error"
 	errorTypeBadData  = "bad_data"
 
@@ -92,10 +96,149 @@ func TestQueryResponse_Unmarshal_Matrix(t *testing.T) {
 		t.Fatalf("failed to unmarshal: %v", err)
 	}
 
-	if resp.Data.ResultType != "matrix" {
+	if resp.Data.ResultType != resultTypeMatrix {
 		t.Errorf("expected resultType matrix, got %s", resp.Data.ResultType)
 	}
 }
+
+func TestQueryResponse_Unmarshal_Vector(t *testing.T) {
+	raw := vectorResponseFixture
+
+	var resp loki.QueryResponse
+	err := json.Unmarshal([]byte(raw), &resp)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	if resp.Data.ResultType != resultTypeVector {
+		t.Errorf("expected resultType vector, got %s", resp.Data.ResultType)
+	}
+
+	if len(resp.Data.Result[0].Value) != 2 {
+		t.Fatalf("expected vector value pair, got %d elements", len(resp.Data.Result[0].Value))
+	}
+}
+
+func TestParseQueryResponse_Streams(t *testing.T) {
+	raw := `{
+		"status": "success",
+		"data": {
+			"resultType": "streams",
+			"result": [
+				{
+					"stream": {"app": "nginx", "env": "prod"},
+					"values": [
+						["1609459200000000000", "\u001b[31merror\u001b[0m"]
+					]
+				}
+			]
+		}
+	}`
+
+	var resp loki.QueryResponse
+	err := json.Unmarshal([]byte(raw), &resp)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	parsed := loki.ParseQueryResponse(&resp)
+	if parsed.ResultType != resultTypeStreams {
+		t.Fatalf("expected streams, got %s", parsed.ResultType)
+	}
+
+	if len(parsed.Streams) != 1 {
+		t.Fatalf("expected 1 stream entry, got %d", len(parsed.Streams))
+	}
+
+	if parsed.Streams[0].Line != "error" {
+		t.Errorf("expected ANSI stripped line, got %q", parsed.Streams[0].Line)
+	}
+
+	if parsed.Streams[0].Timestamp != timestampSample {
+		t.Errorf("expected RFC3339Nano timestamp, got %s", parsed.Streams[0].Timestamp)
+	}
+
+	if parsed.Streams[0].Labels[labelApp] != appNginx {
+		t.Errorf("expected app=nginx, got %s", parsed.Streams[0].Labels[labelApp])
+	}
+}
+
+func TestParseQueryResponse_Matrix(t *testing.T) {
+	raw := `{
+		"status": "success",
+		"data": {
+			"resultType": "matrix",
+			"result": [
+				{
+					"metric": {"namespace": "kube-system"},
+					"values": [
+						[1609459200, "100"],
+						[1609459260, "150"]
+					]
+				}
+			]
+		}
+	}`
+
+	var resp loki.QueryResponse
+	err := json.Unmarshal([]byte(raw), &resp)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	parsed := loki.ParseQueryResponse(&resp)
+	if parsed.ResultType != resultTypeMatrix {
+		t.Fatalf("expected matrix, got %s", parsed.ResultType)
+	}
+
+	if len(parsed.Series) != 1 {
+		t.Fatalf("expected 1 series, got %d", len(parsed.Series))
+	}
+
+	if parsed.Series[0].Labels["namespace"] != namespaceKube {
+		t.Errorf("expected namespace label, got %v", parsed.Series[0].Labels)
+	}
+
+	if parsed.Series[0].Values[0].Timestamp != timestampSample {
+		t.Errorf("expected RFC3339Nano timestamp, got %s", parsed.Series[0].Values[0].Timestamp)
+	}
+}
+
+func TestParseQueryResponse_Vector(t *testing.T) {
+	raw := vectorResponseFixture
+
+	var resp loki.QueryResponse
+	err := json.Unmarshal([]byte(raw), &resp)
+	if err != nil {
+		t.Fatalf("failed to unmarshal: %v", err)
+	}
+
+	parsed := loki.ParseQueryResponse(&resp)
+	if parsed.ResultType != resultTypeVector {
+		t.Fatalf("expected vector, got %s", parsed.ResultType)
+	}
+
+	if parsed.Series[0].Value == nil {
+		t.Fatal("expected vector value")
+	}
+
+	if parsed.Series[0].Value.Value != "42" {
+		t.Errorf("expected value 42, got %s", parsed.Series[0].Value.Value)
+	}
+}
+
+const vectorResponseFixture = `{
+		"status": "success",
+		"data": {
+			"resultType": "vector",
+			"result": [
+				{
+					"metric": {"namespace": "kube-system"},
+					"value": [1609459200, "42"]
+				}
+			]
+		}
+	}`
 
 func TestLabelsResponse_Unmarshal(t *testing.T) {
 	raw := `{

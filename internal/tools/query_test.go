@@ -45,13 +45,136 @@ func TestQueryHandler_Success(t *testing.T) {
 		Query: selectorTest,
 	}
 
-	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, params)
 	if err != nil {
 		t.Fatalf("handler failed: %v", err)
 	}
 
-	if result != nil && result.IsError {
-		t.Errorf("expected success, got error")
+	if output.ResultType != resultTypeValue {
+		t.Errorf("expected resultType streams, got %s", output.ResultType)
+	}
+
+	if len(output.Streams) != 1 {
+		t.Fatalf("expected 1 structured stream entry, got %d", len(output.Streams))
+	}
+
+	if output.Streams[0].Line != "test log line" {
+		t.Errorf("expected structured line, got %q", output.Streams[0].Line)
+	}
+
+	if output.Output == "" {
+		t.Error("expected deprecated output field for compatibility")
+	}
+}
+
+func TestQueryHandler_AutoRoutesMetricRangeWithStep(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/loki/api/v1/query_range" {
+			t.Fatalf("expected query_range, got %s", r.URL.Path)
+		}
+
+		if r.URL.Query().Get("step") != "1m" {
+			t.Fatalf("expected default step 1m, got %s", r.URL.Query().Get("step"))
+		}
+
+		resp := loki.QueryResponse{
+			Status: statusSuccess,
+			Data: loki.QueryData{
+				ResultType: resultTypeMatrix,
+				Result: []loki.StreamResult{
+					{
+						Metric: map[string]string{labelNamespace: namespaceKube},
+						Values: [][]json.RawMessage{
+							{json.RawMessage(`1609459200`), json.RawMessage(`"5"`)},
+						},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+	handler := tools.NewQueryHandler(client)
+
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
+		Query: `sum by (namespace) (count_over_time({namespace=~".+"}[1h]))`,
+		Start: timerange1h,
+	})
+	if err != nil {
+		t.Fatalf("handler failed: %v", err)
+	}
+
+	if output.ResultType != resultTypeMatrix {
+		t.Fatalf("expected matrix, got %s", output.ResultType)
+	}
+
+	if len(output.Series) != 1 || output.Series[0].Labels[labelNamespace] != namespaceKube {
+		t.Fatalf("expected labeled series, got %+v", output.Series)
+	}
+}
+
+func TestQueryHandler_AutoRoutesMetricInstant(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/loki/api/v1/query" {
+			t.Fatalf("expected query, got %s", r.URL.Path)
+		}
+
+		resp := loki.QueryResponse{
+			Status: statusSuccess,
+			Data: loki.QueryData{
+				ResultType: resultTypeVector,
+				Result: []loki.StreamResult{
+					{
+						Metric: map[string]string{labelNamespace: namespaceFoo},
+						Value: []json.RawMessage{
+							json.RawMessage(`1609459200`),
+							json.RawMessage(`"7"`),
+						},
+					},
+				},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+	handler := tools.NewQueryHandler(client)
+
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
+		Query: `count_over_time({namespace="foo"}[1h])`,
+	})
+	if err != nil {
+		t.Fatalf("handler failed: %v", err)
+	}
+
+	if output.ResultType != resultTypeVector {
+		t.Fatalf("expected vector, got %s", output.ResultType)
+	}
+
+	if output.Series[0].Value == nil || output.Series[0].Value.Value != "7" {
+		t.Fatalf("expected instant vector value, got %+v", output.Series)
+	}
+}
+
+func TestQueryHandler_InvalidQueryType(t *testing.T) {
+	client := loki.NewClient("http://localhost:3100", "", "", "", "")
+	handler := tools.NewQueryHandler(client)
+
+	_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
+		Query:     selectorTest,
+		QueryType: "invalid",
+	})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+
+	if !errors.Is(err, tools.ErrValidation) {
+		t.Fatalf("expected ErrValidation, got %v", err)
 	}
 }
 

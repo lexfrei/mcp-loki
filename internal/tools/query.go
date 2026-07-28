@@ -38,7 +38,7 @@ var ErrEmptyTimeString = errors.New("empty time string")
 // ErrInvalidTimeFormat is returned when a time string cannot be parsed.
 var ErrInvalidTimeFormat = errors.New("invalid time format")
 
-var metricQueryRE = regexp.MustCompile(`(?i)\b(?:sum|avg|min|max|count|stddev|stdvar|topk|bottomk|quantile|count_over_time|rate|bytes_rate|bytes_over_time|sum_over_time|avg_over_time|min_over_time|max_over_time|first_over_time|last_over_time|stdvar_over_time|stddev_over_time|quantile_over_time|absent_over_time|present_over_time|deriv|predict_linear|label_replace|label_join|vector|scalar)\b`)
+var metricQueryRE = regexp.MustCompile(`(?i)\b(?:sum|avg|min|max|count|stddev|stdvar|topk|bottomk|quantile|count_over_time|rate|rate_counter|bytes_rate|bytes_over_time|sum_over_time|avg_over_time|min_over_time|max_over_time|first_over_time|last_over_time|stdvar_over_time|stddev_over_time|quantile_over_time|absent_over_time|present_over_time|deriv|predict_linear|label_replace|label_join|vector|scalar)\b`)
 
 // QueryParams defines the parameters for the loki_query tool.
 type QueryParams struct {
@@ -192,37 +192,44 @@ func resolveQueryMode(query, queryType, start, end string) string {
 }
 
 func isMetricQuery(query string) bool {
+	if startsWithStreamSelector(query) {
+		return false
+	}
+
 	return metricQueryRE.MatchString(metricQuerySurface(query))
 }
 
-// metricQuerySurface removes LogQL literals and selectors, where metric keywords
-// can occur as data rather than executable expressions.
+// startsWithStreamSelector reports whether the query opens with a stream selector.
+// A metric expression always wraps the selector in a range aggregation, so a leading
+// "{" means this is a log query whatever keywords its pipeline stages contain.
+func startsWithStreamSelector(query string) bool {
+	remainder := strings.TrimSpace(query)
+
+	for strings.HasPrefix(remainder, "#") {
+		_, after, found := strings.Cut(remainder, "\n")
+		if !found {
+			return false
+		}
+
+		remainder = strings.TrimSpace(after)
+	}
+
+	return strings.HasPrefix(remainder, "{")
+}
+
+// metricQuerySurface removes LogQL literals, comments, and selectors, where metric
+// keywords can occur as data rather than executable expressions.
 func metricQuerySurface(query string) string {
 	var builder strings.Builder
 
-	inString := false
 	selectorDepth := 0
 
 	for index := 0; index < len(query); index++ {
-		character := query[index]
-
-		if inString {
-			if character == '\\' && index+1 < len(query) {
-				index++
-			} else if character == '"' {
-				inString = false
-			}
-
-			continue
-		}
-
-		if character == '"' {
-			inString = true
-
-			continue
-		}
-
-		switch character {
+		switch character := query[index]; character {
+		case '"', '`':
+			index = skipStringLiteral(query, index)
+		case '#':
+			index = skipLineComment(query, index)
 		case '{':
 			selectorDepth++
 		case '}':
@@ -237,6 +244,38 @@ func metricQuerySurface(query string) string {
 	}
 
 	return builder.String()
+}
+
+// skipStringLiteral returns the index of the delimiter closing the literal that opens
+// at start, or the query length when the literal is unterminated. Backtick literals
+// are raw, so only double-quoted strings honor escapes.
+func skipStringLiteral(query string, start int) int {
+	delimiter := query[start]
+
+	for index := start + 1; index < len(query); index++ {
+		if delimiter == '"' && query[index] == '\\' {
+			index++
+
+			continue
+		}
+
+		if query[index] == delimiter {
+			return index
+		}
+	}
+
+	return len(query)
+}
+
+// skipLineComment returns the index of the newline ending the comment that opens at
+// start, or the query length when the comment runs to the end of the query.
+func skipLineComment(query string, start int) int {
+	offset := strings.IndexByte(query[start:], '\n')
+	if offset < 0 {
+		return len(query)
+	}
+
+	return start + offset
 }
 
 func resolveRangeTimes(startParam, endParam string) (time.Time, time.Time, error) {

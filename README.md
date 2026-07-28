@@ -145,11 +145,15 @@ Execute LogQL queries against Loki.
 | `series` | array | Metric series with `labels` and `values` or `value` |
 | `output` | string | Deprecated human-readable duplicate of the structured data (kept for one release for compatibility) |
 
+`output` is populated on every response, so each payload carries the same data twice and costs roughly double the tokens of the structured fields alone. Read `streams`/`series` instead; `output` is removed in the next release.
+
 **Auto routing (`queryType=auto`):**
 
-- Log selectors such as `{app="nginx"} |= "error"` use `query_range`.
+- Queries that open with a stream selector, such as `{app="nginx"} |= "error"`, are log queries and use `query_range`. Pipeline stages cannot change this, so keywords like `count` or `rate` in a line filter or label filter are safe.
 - Metric expressions such as `count_over_time(...)` or `sum by (...)` use `query_range` when `start` and/or `end` are provided, defaulting `step` to `1m`.
 - Metric expressions with no time bounds use the instant query API at `now`.
+
+Set `queryType` explicitly to bypass routing. The instant API rejects log queries, so `queryType=instant` only makes sense for metric expressions.
 
 **Examples:**
 

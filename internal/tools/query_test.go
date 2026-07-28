@@ -16,6 +16,9 @@ import (
 const (
 	queryInstantPath = "/loki/api/v1/query"
 	queryRangePath   = "/loki/api/v1/query_range"
+
+	valueAPI          = "api"
+	metricSumOverTime = `sum by (namespace) (count_over_time({namespace=~".+"}[1h]))`
 )
 
 func TestQueryHandler_Success(t *testing.T) {
@@ -105,7 +108,7 @@ func TestQueryHandler_AutoRoutesMetricRangeWithStep(t *testing.T) {
 	handler := tools.NewQueryHandler(client)
 
 	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
-		Query: `sum by (namespace) (count_over_time({namespace=~".+"}[1h]))`,
+		Query: metricSumOverTime,
 		Start: timerange1h,
 	})
 	if err != nil {
@@ -174,6 +177,12 @@ func TestQueryHandler_AutoRoutesLogSelectorsToRange(t *testing.T) {
 		`{app="max-pods"}`,
 		`{app="api"} |= "vector clock"`,
 		`{app="api"} |= "error"`,
+		"{app=\"api\"} |= `rate limited`",
+		"{app=\"api\"} |~ `error|rate`",
+		`{app="api"} | json | count=5`,
+		`{app="api"} | logfmt | rate=0.5`,
+		`{app="api"} | json # count the errors`,
+		"# count the errors\n{app=\"api\"}",
 	}
 
 	for _, query := range queries {
@@ -194,7 +203,7 @@ func TestQueryHandler_AutoRoutesLogSelectorsToRange(t *testing.T) {
 					Data: loki.QueryData{
 						ResultType: resultTypeValue,
 						Result: []loki.StreamResult{{
-							Stream: map[string]string{argApp: "api"},
+							Stream: map[string]string{argApp: valueAPI},
 							Values: [][]json.RawMessage{{
 								json.RawMessage(`"1609459200000000000"`),
 								json.RawMessage(`"hello"`),
@@ -215,6 +224,198 @@ func TestQueryHandler_AutoRoutesLogSelectorsToRange(t *testing.T) {
 				t.Fatalf("query %q used %s, want query_range", query, seenPath)
 			}
 		})
+	}
+}
+
+func TestQueryHandler_AutoRoutesMetricExpressionsToInstant(t *testing.T) {
+	queries := []string{
+		`rate_counter({app="api"} | unwrap bytes [5m])`,
+		"sum(count_over_time({app=\"api\"} |= `rate limited` [5m]))",
+		"# hourly errors\ncount_over_time({app=\"api\"}[1h])",
+	}
+
+	for _, query := range queries {
+		t.Run(query, func(t *testing.T) {
+			var seenPath string
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				seenPath = r.URL.Path
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(loki.QueryResponse{
+					Status: statusSuccess,
+					Data: loki.QueryData{
+						ResultType: resultTypeVector,
+						Result: []loki.StreamResult{{
+							Metric: map[string]string{labelNamespace: namespaceFoo},
+							Value: []json.RawMessage{
+								json.RawMessage(`1609459200`),
+								json.RawMessage(`"7"`),
+							},
+						}},
+					},
+				})
+			}))
+			defer server.Close()
+
+			handler := tools.NewQueryHandler(loki.NewClient(server.URL, "", "", "", ""))
+
+			_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{Query: query})
+			if err != nil {
+				t.Fatalf("query %q failed: %v", query, err)
+			}
+
+			if seenPath != queryInstantPath {
+				t.Fatalf("query %q used %s, want %s", query, seenPath, queryInstantPath)
+			}
+		})
+	}
+}
+
+func TestQueryHandler_ExplicitQueryTypeOverridesAutoRouting(t *testing.T) {
+	metricQuery := `count_over_time({app="test"}[1h])`
+
+	testCases := []struct {
+		name      string
+		queryType string
+		wantPath  string
+	}{
+		{
+			name:      "range keeps a metric without time bounds on query_range",
+			queryType: "range",
+			wantPath:  queryRangePath,
+		},
+		{
+			name:      "instant uses the instant endpoint",
+			queryType: "instant",
+			wantPath:  queryInstantPath,
+		},
+		{
+			name:      "surrounding space and casing are accepted",
+			queryType: " Instant ",
+			wantPath:  queryInstantPath,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var seenPath string
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				seenPath = r.URL.Path
+
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(loki.QueryResponse{
+					Status: statusSuccess,
+					Data:   loki.QueryData{ResultType: resultTypeVector},
+				})
+			}))
+			defer server.Close()
+
+			handler := tools.NewQueryHandler(loki.NewClient(server.URL, "", "", "", ""))
+
+			_, _, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
+				Query:     metricQuery,
+				QueryType: testCase.queryType,
+			})
+			if err != nil {
+				t.Fatalf("handler failed: %v", err)
+			}
+
+			if seenPath != testCase.wantPath {
+				t.Errorf("queryType %q used %s, want %s", testCase.queryType, seenPath, testCase.wantPath)
+			}
+		})
+	}
+}
+
+func TestQueryHandler_TruncatedReflectsLimit(t *testing.T) {
+	matrixResponse := loki.QueryResponse{
+		Status: statusSuccess,
+		Data: loki.QueryData{
+			ResultType: resultTypeMatrix,
+			Result: []loki.StreamResult{{
+				Metric: map[string]string{labelNamespace: namespaceKube},
+				Values: [][]json.RawMessage{{json.RawMessage(`1609459200`), json.RawMessage(`"5"`)}},
+			}},
+		},
+	}
+
+	testCases := []struct {
+		name      string
+		query     string
+		limit     int
+		response  loki.QueryResponse
+		truncated bool
+	}{
+		{
+			name:      "stream entries reach the limit",
+			query:     selectorTest,
+			limit:     2,
+			response:  streamResponseWithEntries(2),
+			truncated: true,
+		},
+		{
+			name:      "stream entries stay below the limit",
+			query:     selectorTest,
+			limit:     3,
+			response:  streamResponseWithEntries(2),
+			truncated: false,
+		},
+		{
+			name:      "metric series are never reported as truncated",
+			query:     metricSumOverTime,
+			limit:     1,
+			response:  matrixResponse,
+			truncated: false,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_ = json.NewEncoder(w).Encode(testCase.response)
+			}))
+			defer server.Close()
+
+			handler := tools.NewQueryHandler(loki.NewClient(server.URL, "", "", "", ""))
+
+			_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, tools.QueryParams{
+				Query: testCase.query,
+				Limit: testCase.limit,
+				Start: timerange1h,
+			})
+			if err != nil {
+				t.Fatalf("handler failed: %v", err)
+			}
+
+			if output.Truncated != testCase.truncated {
+				t.Errorf("truncated = %v, want %v", output.Truncated, testCase.truncated)
+			}
+		})
+	}
+}
+
+func streamResponseWithEntries(entries int) loki.QueryResponse {
+	values := make([][]json.RawMessage, 0, entries)
+
+	for range entries {
+		values = append(values, []json.RawMessage{
+			json.RawMessage(`"1609459200000000000"`),
+			json.RawMessage(`"hello"`),
+		})
+	}
+
+	return loki.QueryResponse{
+		Status: statusSuccess,
+		Data: loki.QueryData{
+			ResultType: resultTypeValue,
+			Result: []loki.StreamResult{{
+				Stream: map[string]string{argApp: valueAPI},
+				Values: values,
+			}},
+		},
 	}
 }
 

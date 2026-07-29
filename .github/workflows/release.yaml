@@ -68,7 +68,8 @@ jobs:
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=ghcr.io/${{ github.repository }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ steps.platform.outputs.pair }}
-          cache-to: type=gha,scope=build-${{ steps.platform.outputs.pair }},mode=max
+          # Same as pr.yaml: a cache-export failure must not fail a release build.
+          cache-to: type=gha,scope=build-${{ steps.platform.outputs.pair }},mode=max,ignore-error=true
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.version'] }}

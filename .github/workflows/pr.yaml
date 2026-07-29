@@ -122,7 +122,12 @@ jobs:
           platforms: ${{ matrix.platform }}
           outputs: type=image,name=ttl.sh/mcp-loki,push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ matrix.arch }}
-          cache-to: type=gha,scope=build-${{ matrix.arch }},mode=max
+          # ignore-error keeps a cache-export failure from failing the build. The
+          # GitHub Actions cache backend answers "failed to reserve cache" when
+          # several builds push the same scope at once, and the job then goes red on
+          # an image that was already built and pushed. Cache is an optimisation and
+          # must not be able to gate a merge.
+          cache-to: type=gha,scope=build-${{ matrix.arch }},mode=max,ignore-error=true
           build-args: |
             VERSION=pr-${{ github.event.pull_request.number }}
 

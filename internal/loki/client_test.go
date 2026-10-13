@@ -13,10 +13,16 @@ import (
 
 const statusSuccess = "success"
 
+const (
+	pathQueryRange   = "/loki/api/v1/query_range"
+	pathQueryInstant = "/loki/api/v1/query"
+	valueTest        = "test"
+)
+
 func TestClient_QueryRange(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path != "/loki/api/v1/query_range" {
-			t.Errorf("expected path /loki/api/v1/query_range, got %s", r.URL.Path)
+		if r.URL.Path != pathQueryRange {
+			t.Errorf("expected path %s, got %s", pathQueryRange, r.URL.Path)
 		}
 
 		if r.URL.Query().Get("query") != `{app="test"}` {
@@ -29,7 +35,7 @@ func TestClient_QueryRange(t *testing.T) {
 				ResultType: resultTypeStreams,
 				Result: []loki.StreamResult{
 					{
-						Stream: map[string]string{labelApp: "test"},
+						Stream: map[string]string{labelApp: valueTest},
 						Values: [][]json.RawMessage{
 							{json.RawMessage(`"1609459200000000000"`), json.RawMessage(`"test log"`)},
 						},
@@ -49,7 +55,7 @@ func TestClient_QueryRange(t *testing.T) {
 
 	client := loki.NewClient(server.URL, "", "", "", "")
 
-	resp, err := client.QueryRange(context.Background(), `{app="test"}`, time.Now().Add(-time.Hour), time.Now(), 100, "backward")
+	resp, err := client.QueryRange(context.Background(), `{app="test"}`, time.Now().Add(-time.Hour), time.Now(), 100, "backward", "")
 	if err != nil {
 		t.Fatalf("QueryRange failed: %v", err)
 	}
@@ -60,6 +66,100 @@ func TestClient_QueryRange(t *testing.T) {
 
 	if len(resp.Data.Result) != 1 {
 		t.Fatalf("expected 1 result, got %d", len(resp.Data.Result))
+	}
+}
+
+func TestClient_QueryRange_WithStep(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != pathQueryRange {
+			t.Errorf("expected path %s, got %s", pathQueryRange, r.URL.Path)
+		}
+
+		if r.URL.Query().Get("step") != "1m" {
+			t.Errorf("expected step=1m, got %s", r.URL.Query().Get("step"))
+		}
+
+		resp := loki.QueryResponse{
+			Status: statusSuccess,
+			Data: loki.QueryData{
+				ResultType: resultTypeMatrix,
+				Result:     []loki.StreamResult{},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			t.Fatalf("failed to encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+
+	_, err := client.QueryRange(
+		context.Background(),
+		`sum by (app) (count_over_time({app="test"}[5m]))`,
+		time.Now().Add(-time.Hour),
+		time.Now(),
+		100,
+		"backward",
+		"1m",
+	)
+	if err != nil {
+		t.Fatalf("QueryRange with step failed: %v", err)
+	}
+}
+
+func TestClient_QueryInstant(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != pathQueryInstant {
+			t.Errorf("expected path %s, got %s", pathQueryInstant, r.URL.Path)
+		}
+
+		if r.URL.Query().Get("query") != `count_over_time({app="test"}[5m])` {
+			t.Errorf("unexpected query: %s", r.URL.Query().Get("query"))
+		}
+
+		if r.URL.Query().Get("time") == "" {
+			t.Error("expected time parameter")
+		}
+
+		resp := loki.QueryResponse{
+			Status: statusSuccess,
+			Data: loki.QueryData{
+				ResultType: resultTypeVector,
+				Result: []loki.StreamResult{
+					{
+						Metric: map[string]string{labelApp: valueTest},
+						Value: []json.RawMessage{
+							json.RawMessage(`1609459200`),
+							json.RawMessage(`"42"`),
+						},
+					},
+				},
+			},
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+
+		err := json.NewEncoder(w).Encode(resp)
+		if err != nil {
+			t.Fatalf("failed to encode response: %v", err)
+		}
+	}))
+	defer server.Close()
+
+	client := loki.NewClient(server.URL, "", "", "", "")
+
+	resp, err := client.QueryInstant(context.Background(), `count_over_time({app="test"}[5m])`, time.Unix(1609459200, 0), 10)
+	if err != nil {
+		t.Fatalf("QueryInstant failed: %v", err)
+	}
+
+	if resp.Data.ResultType != resultTypeVector {
+		t.Errorf("expected vector result, got %s", resp.Data.ResultType)
 	}
 }
 

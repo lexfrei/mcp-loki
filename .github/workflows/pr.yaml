@@ -1,7 +1,7 @@
 name: PR Checks and Build
 
 on:
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize]
 
 concurrency:
@@ -10,18 +10,17 @@ concurrency:
 
 permissions:
   contents: read
-  pull-requests: write
-  security-events: write
 
 jobs:
   security:
     name: Security Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - name: Checkout PR code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Run Trivy vulnerability scanner (filesystem)
         uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec # master
@@ -32,7 +31,9 @@ jobs:
           output: 'trivy-fs-results.sarif'
           severity: 'CRITICAL,HIGH,MEDIUM'
 
+      # A fork's token is read-only, so the upload would fail the scan itself.
       - name: Upload Trivy filesystem results to GitHub Security
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: github/codeql-action/upload-sarif@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
         with:
           sarif_file: 'trivy-fs-results.sarif'
@@ -44,8 +45,6 @@ jobs:
     steps:
       - name: Checkout PR code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -71,8 +70,6 @@ jobs:
     steps:
       - name: Checkout PR code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Setup Go
         uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
@@ -107,8 +104,6 @@ jobs:
     steps:
       - name: Checkout PR code
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
@@ -213,8 +208,13 @@ jobs:
     name: Notify PR
     needs: merge-manifests
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     steps:
+      # A fork's token cannot label or comment. Skipping this step leaves the
+      # two steps below skipped too, and the job still reports success.
       - name: Check if first build
+        if: github.event.pull_request.head.repo.full_name == github.repository
         id: first_build
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:

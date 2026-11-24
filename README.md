@@ -72,6 +72,7 @@ All configuration is done via environment variables:
 | `LOKI_TOKEN` | No | — | Bearer token (alternative to basic auth) |
 | `LOKI_ORG_ID` | No | — | X-Scope-OrgID header for multi-tenant Loki |
 | `MCP_HTTP_PORT` | No | — | Enable HTTP SSE transport on this port |
+| `MCP_SESSION_TIMEOUT` | No | `30m` | Close idle HTTP sessions after this Go duration (`0` disables) |
 
 ### Authentication Examples
 

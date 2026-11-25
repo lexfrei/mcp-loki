@@ -36,7 +36,10 @@ func main() {
 }
 
 func run() error {
-	cfg := config.Load()
+	cfg, err := config.Load()
+	if err != nil {
+		return errors.Wrap(err, "failed to load config")
+	}
 
 	lokiClient := loki.NewClient(
 		cfg.LokiURL,
@@ -79,10 +82,10 @@ func run() error {
 	}()
 
 	if cfg.HTTPEnabled() {
-		go runHTTPServer(ctx, server, cfg.HTTPPort)
+		go runHTTPServer(ctx, server, cfg.HTTPPort, cfg.SessionTimeout)
 	}
 
-	err := server.Run(ctx, &mcp.StdioTransport{})
+	err = server.Run(ctx, &mcp.StdioTransport{})
 	if err != nil && ctx.Err() == nil {
 		return errors.Wrap(err, "server run failed")
 	}
@@ -105,17 +108,23 @@ func registerPrompts(server *mcp.Server) {
 	server.AddPrompt(tools.TopLabelValuesPrompt(), tools.TopLabelValuesHandler())
 }
 
-func runHTTPServer(ctx context.Context, server *mcp.Server, port string) {
-	handler := mcp.NewStreamableHTTPHandler(
+// newHTTPHandler sets SessionTimeout because go-sdk never closes idle sessions
+// when it is zero, and clients routinely disconnect without sending DELETE.
+func newHTTPHandler(server *mcp.Server, sessionTimeout time.Duration) http.Handler {
+	return mcp.NewStreamableHTTPHandler(
 		func(_ *http.Request) *mcp.Server {
 			return server
 		},
-		nil,
+		&mcp.StreamableHTTPOptions{
+			SessionTimeout: sessionTimeout,
+		},
 	)
+}
 
+func runHTTPServer(ctx context.Context, server *mcp.Server, port string, sessionTimeout time.Duration) {
 	httpServer := &http.Server{
 		Addr:              ":" + port,
-		Handler:           handler,
+		Handler:           newHTTPHandler(server, sessionTimeout),
 		ReadHeaderTimeout: readHeaderTimeout,
 	}
 

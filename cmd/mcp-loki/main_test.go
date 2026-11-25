@@ -22,7 +22,9 @@ const (
 	idleWait           = 200 * time.Millisecond
 )
 
-func postMCP(t *testing.T, url, sessionID, body string) *http.Response {
+// postMCP returns the status code and the Mcp-Session-Id response header, so
+// callers never hold the response itself.
+func postMCP(t *testing.T, url, sessionID, body string) (int, string) {
 	t.Helper()
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, url, strings.NewReader(body))
@@ -42,25 +44,25 @@ func postMCP(t *testing.T, url, sessionID, body string) *http.Response {
 		t.Fatalf("POST %s: %v", url, err)
 	}
 
-	_, _ = io.Copy(io.Discard, resp.Body)
-	_ = resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
-	return resp
+	_, _ = io.Copy(io.Discard, resp.Body)
+
+	return resp.StatusCode, resp.Header.Get("Mcp-Session-Id")
 }
 
-func initSession(t *testing.T, sessionTimeout time.Duration) (url, sessionID string) {
+func initSession(t *testing.T, sessionTimeout time.Duration) (string, string) {
 	t.Helper()
 
 	server := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "0"}, nil)
 	ts := httptest.NewServer(newHTTPHandler(server, sessionTimeout))
 	t.Cleanup(ts.Close)
 
-	resp := postMCP(t, ts.URL, "", initializeBody)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("initialize: status %d", resp.StatusCode)
+	status, sessionID := postMCP(t, ts.URL, "", initializeBody)
+	if status != http.StatusOK {
+		t.Fatalf("initialize: status %d", status)
 	}
 
-	sessionID = resp.Header.Get("Mcp-Session-Id")
 	if sessionID == "" {
 		t.Fatal("initialize: no Mcp-Session-Id header")
 	}
@@ -74,13 +76,13 @@ func TestHTTPHandler_ClosesIdleSession(t *testing.T) {
 	deadline := time.Now().Add(expiryDeadline)
 
 	for {
-		resp := postMCP(t, url, sessionID, pingBody)
-		if resp.StatusCode == http.StatusNotFound {
+		status, _ := postMCP(t, url, sessionID, pingBody)
+		if status == http.StatusNotFound {
 			return
 		}
 
 		if time.Now().After(deadline) {
-			t.Fatalf("idle session still alive after deadline: last status %d", resp.StatusCode)
+			t.Fatalf("idle session still alive after deadline: last status %d", status)
 		}
 
 		time.Sleep(pollInterval)
@@ -92,8 +94,8 @@ func TestHTTPHandler_ZeroTimeoutKeepsSession(t *testing.T) {
 
 	time.Sleep(idleWait)
 
-	resp := postMCP(t, url, sessionID, pingBody)
-	if resp.StatusCode != http.StatusOK {
-		t.Fatalf("expected session to survive with timeout disabled, got status %d", resp.StatusCode)
+	status, _ := postMCP(t, url, sessionID, pingBody)
+	if status != http.StatusOK {
+		t.Fatalf("expected session to survive with timeout disabled, got status %d", status)
 	}
 }

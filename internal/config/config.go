@@ -58,7 +58,7 @@ func parseSessionTimeout(raw string) (time.Duration, error) {
 
 	timeout, err := time.ParseDuration(raw)
 	if err != nil {
-		return 0, errors.Wrapf(ErrInvalidSessionTimeout, "%q: %v", raw, err)
+		return 0, errors.Wrapf(ErrInvalidSessionTimeout, "%v", err)
 	}
 
 	if timeout < 0 {

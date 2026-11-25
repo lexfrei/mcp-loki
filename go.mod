@@ -5,6 +5,7 @@ go 1.27.4
 require (
 	github.com/cockroachdb/errors v1.14.0
 	github.com/modelcontextprotocol/go-sdk v1.8.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
